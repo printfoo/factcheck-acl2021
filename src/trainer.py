@@ -43,7 +43,7 @@ def display_example(dataset, x, z=None, threshold=0.9):
     sys.stdout.flush()
 
 
-data_dir = "../data/"
+data_dir = "data/"
 beer_data = BeerDatasetBinarySingleAspectWithTest(data_dir, score_threshold=0.6, split_ratio=0.1)
 
 class Argument():
@@ -85,7 +85,7 @@ class Argument():
         self.with_lm = False
         self.batch_size_ngram_eval = 5
         self.lr=0.001
-        self.working_dir = '../tmp'
+        self.working_dir = 'tmp'
         self.model_prefix = 'tmp.%s.highlight%.2f.cont%.2f'%(self.game_mode, self.highlight_percentage, self.lambda_continuity)
         self.pre_trained_model_prefix = 'pre_trained_cls.model'
 
