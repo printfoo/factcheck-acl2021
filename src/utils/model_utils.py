@@ -1,7 +1,4 @@
-
 # coding: utf-8
-
-# In[ ]:
 
 
 import torch
@@ -10,11 +7,6 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 import numpy as np
-# import matplotlib.pyplot as plt
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-
-# In[ ]:
 
 
 class Transpose(nn.Module):
@@ -28,9 +20,6 @@ class Transpose(nn.Module):
         transpose dim1 and dim2 of input tensor x
         """
         return x.transpose(self.dim1, self.dim2).contiguous()
-
-
-# In[ ]:
 
 
 def single_regularization_loss_batch(z, mask):
@@ -57,9 +46,6 @@ def single_regularization_loss_batch(z, mask):
     sparsity_loss = torch.sum(mask_z, dim=-1) / seq_lengths  #(batch_size,)
 
     return sparsity_loss, continuity_loss
-
-
-# In[ ]:
 
 
 def bao_regularization_loss_batch(z, percentage, mask=None):
@@ -92,9 +78,6 @@ def bao_regularization_loss_batch(z, percentage, mask=None):
     return continuity_loss, sparsity_loss
 
 
-# In[ ]:
-
-
 def bao_regularization_hinge_loss_batch(z, percentage, mask=None):
     """
     Compute regularization loss, based on a given rationale sequence
@@ -125,9 +108,6 @@ def bao_regularization_hinge_loss_batch(z, percentage, mask=None):
     sparsity_loss = F.threshold(sparsity_ratio - percentage, 0, 0, False)
 
     return continuity_loss, sparsity_loss
-
-
-# In[ ]:
 
 
 def count_regularization_loss_batch(z, count, mask=None):
@@ -164,9 +144,6 @@ def count_regularization_loss_batch(z, count, mask=None):
     return continuity_loss, sparsity_loss
 
 
-# In[ ]:
-
-
 def count_regularization_hinge_loss_batch(z, count, mask=None):
     """
     Compute regularization loss, based on a given rationale sequence
@@ -201,9 +178,6 @@ def count_regularization_hinge_loss_batch(z, count, mask=None):
     return continuity_loss, sparsity_loss
 
 
-# In[ ]:
-
-
 def bao_regularization_hinge_loss_batch_with_none_loss(z, percentage, none_relation, mask):
     """
     Compute regularization loss, based on a given rationale sequence
@@ -232,9 +206,6 @@ def bao_regularization_hinge_loss_batch_with_none_loss(z, percentage, none_relat
     return continuity_loss, sparsity_loss
 
 
-# In[ ]:
-
-
 def show_1d_rationale(probs, text, max_len=50):
     """
     show 1d bar plot. 
@@ -252,12 +223,3 @@ def show_1d_rationale(probs, text, max_len=50):
     plt.xticks(range(show_len), text[0:show_len], size='small', rotation="vertical")     
     plt.title('Probability distribution of the first %d words' %(max_len))
     plt.show()
-    
-    
-
-
-# In[ ]:
-
-
-
-

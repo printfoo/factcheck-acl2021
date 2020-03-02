@@ -1,17 +1,10 @@
-
 # coding: utf-8
-
-# In[ ]:
-
 
 import torch
 import torch.nn as nn
 from torchvision.models.resnet import BasicBlock
 import math
 from torch.autograd import Variable  
-
-
-# In[ ]:
 
 
 class CnnModel(nn.Module):
@@ -52,9 +45,6 @@ class CnnModel(nn.Module):
         embeddings_ = embeddings.transpose(1, 2) #(batch_size, embedding_dim, sequence_length)
         hiddens = self.conv_layers(embeddings_)
         return hiddens
-
-
-# In[ ]:
 
 
 class RnnModel(nn.Module):
@@ -102,10 +92,5 @@ class RnnModel(nn.Module):
             hidden, _ = torch.nn.utils.rnn.pad_packed_sequence(hidden) #(length, batch_size, hidden_dim)
         
         return hidden.permute(1, 2, 0) #(batch_size, hidden_dim, sequence_length)
-
-
-# In[ ]:
-
-
 
 

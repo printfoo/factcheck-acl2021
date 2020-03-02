@@ -1,7 +1,4 @@
-
 # coding: utf-8
-
-# In[ ]:
 
 
 import os
@@ -11,9 +8,6 @@ import random
 import numpy as np
 from colored import fg, attr, bg
 import json
-
-
-# In[ ]:
 
 
 class TextDataset(object):
@@ -107,8 +101,6 @@ class TextDataset(object):
             else:
                 sys.stdout.write(" " + word)
         sys.stdout.flush()
-
-# In[ ]:
 
 
 class SentenceClassificationSet(object):
@@ -410,10 +402,6 @@ class SentenceClassification(TextDataset):
             sys.stdout.write(" " + word)
         sys.stdout.write("\n")
         sys.stdout.flush()
-        
-
-
-# In[ ]:
 
 
 class BeerDatasetBinary(SentenceClassification):
@@ -616,10 +604,6 @@ class BeerDatasetBinary(SentenceClassification):
                 sys.stdout.write(" " + word.encode('utf-8'))
         sys.stdout.write("\n")
         sys.stdout.flush()
-        
-
-
-# In[ ]:
 
 
 class RelationClassificationSet(SentenceClassificationSet):
@@ -881,8 +865,6 @@ class RelationClassification(SentenceClassification):
 #         return output.encode('utf-8')
 
 
-# In[ ]:
-
 
 def _test_ask_ubuntu():
     data_dir = "/home/chang/storage/askubuntu"
@@ -891,9 +873,6 @@ def _test_ask_ubuntu():
     embedding_size = 200
     embedding_path = data_dir + "/vector/vectors_pruned.200.txt"
     embeddings = askubuntu_data.initial_embedding(embedding_size, embedding_path)
-
-
-# In[ ]:
 
 
 def _test_init_embedding():
@@ -908,8 +887,6 @@ def _test_init_embedding():
     embeddings = beer_data.initial_embedding(embedding_size, embedding_path)
 
 
-# In[ ]:
-
 
 def _test_numerization():
     data_dir = "/home/chang/storage/beer_review/"
@@ -919,22 +896,8 @@ def _test_numerization():
     x, y = beer_data.get_random_batch(1, batch_size)
 
 
-# In[ ]:
-
 
 if __name__ == "__main__":
-#     _test_ask_ubuntu()
-
-#     data_dir = "/Users/yum/Documents/IBM work/QA_eviagg/MedNLI"
-
-#     mednli_data = MedNLI(data_dir)
-    
-#     q_mat, p_mat, y_vec, q_mask, p_mask  = mednli_data.get_batch('dev', [1], sort=False)
-#     print y_vec
-#     print q_mat[0]
-#     mednli_data.display_sentence(q_mat[0])
-#     print ''
-#     mednli_data.display_sentence(p_mat[0])
     test_case = 'beer'
     
     if test_case == 'semeval': 
@@ -977,10 +940,6 @@ if __name__ == "__main__":
         beer_data.display_example(x_mat[0], z_mat[0])
         beer_data.display_example(x_mat[1], z_mat[1])
         
-
-
-# In[ ]:
-
 
 
 

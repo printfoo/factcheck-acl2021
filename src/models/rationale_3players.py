@@ -1,7 +1,4 @@
-
 # coding: utf-8
-
-# In[ ]:
 
 
 import torch
@@ -10,25 +7,19 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 import copy
-# from models.models import CnnModel, RnnModel
 
-# from basic_nlp_models import BasicNLPModel
-# from models.encoder import Encoder, ClassificationEncoder
-from rnn_model import RnnModel
-from generator import Generator, DepGenerator
+from modules.nn import RnnModel
+from modules.generator import Generator, DepGenerator
 
-from utils import single_regularization_loss_batch, bao_regularization_hinge_loss_batch
-from utils import bao_regularization_loss_batch, count_regularization_loss_batch
-from utils import count_regularization_hinge_loss_batch
-from utils import bao_regularization_hinge_loss_batch_with_none_loss
+from utils.model_utils import single_regularization_loss_batch, bao_regularization_hinge_loss_batch
+from utils.model_utils import bao_regularization_loss_batch, count_regularization_loss_batch
+from utils.model_utils import count_regularization_hinge_loss_batch
+from utils.model_utils import bao_regularization_hinge_loss_batch_with_none_loss
 
-from rationale_3players_sentence_classification_models import ClassifierModule, HardRationale3PlayerClassificationModel
+from models.rationale_3players_sentence_classification import ClassifierModule, HardRationale3PlayerClassificationModel
 # from language_models import NGramLanguageModeler
 
 from collections import deque
-
-
-# In[ ]:
 
 
 def count_regularization_baos_for_both(z, count_tokens, count_pieces, mask=None):

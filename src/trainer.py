@@ -7,12 +7,11 @@ from torch.autograd import Variable
 import numpy as np
 import copy, random, sys, os
 from collections import deque
-import importlib
-
-from beer_dataset_single_aspect import BeerDatasetBinarySingleAspect, BeerDatasetBinarySingleAspectWithTest
-from rationale_3players_for_emnlp import HardRationale3PlayerClassificationModelForEmnlp
 from tqdm import tqdm
-from util_functions import copy_classifier_module, evaluate_rationale_model_glue_for_acl
+
+from datasets.beer_dataset_single_aspect import BeerDatasetBinarySingleAspect, BeerDatasetBinarySingleAspectWithTest
+from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
+from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model_glue_for_acl
 
 # (achtung-gpu) Use the 2nd GPU chip.
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"

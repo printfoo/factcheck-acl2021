@@ -1,7 +1,4 @@
-
 # coding: utf-8
-
-# In[ ]:
 
 
 import os
@@ -12,10 +9,7 @@ import numpy as np
 from colored import fg, attr, bg
 import json
 
-from dataset import SentenceClassification, BeerDatasetBinary, SentenceClassificationSet
-
-
-# In[ ]:
+from datasets.dataset_loader import SentenceClassification, BeerDatasetBinary, SentenceClassificationSet
 
 
 class BeerDatasetBinarySingleAspect(SentenceClassification):
@@ -352,9 +346,6 @@ class BeerDatasetBinarySingleAspectWithTest(SentenceClassification):
         return data_set
 
 
-# In[ ]:
-
-
 if __name__ == "__main__":
     test_case = 'beer'
     
@@ -376,38 +367,3 @@ if __name__ == "__main__":
         
 #         beer_data.display_example(x_mat[0], z_mat[0])
 #         beer_data.display_example(x_mat[1], z_mat[1])
-        
-
-
-# In[ ]:
-
-
-# beer_data = BeerDatasetBinarySingleAspectWithTest(data_dir, score_threshold=0.6)
-
-
-# In[ ]:
-
-
-# fileout = open(os.path.join(data_dir, 'sec_name_dict.json'), 'w')
-# json.dump(beer_data.filtered_name_dict, fileout)
-# fileout.close()
-
-
-# In[ ]:
-
-
-# print beer_data.filtered_name_dict
-
-
-# In[ ]:
-
-
-# print(8511 + 4975)
-# print(6629 + 6733)
-
-
-# In[ ]:
-
-
-
-

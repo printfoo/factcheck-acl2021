@@ -1,17 +1,12 @@
-
 # coding: utf-8
-
-# In[ ]:
 
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from rnn_model import CnnModel, RnnModel
 
-
-# In[ ]:
+from modules.nn import CnnModel, RnnModel
 
 
 def _get_entropy(p):
@@ -40,10 +35,6 @@ def single_soft_regularization_loss(z):
     sparsity_loss = _get_entropy(z)
 
     return continuity_loss, sparsity_loss
-
-
-# In[ ]:
-
 
 class Generator(nn.Module):
     
@@ -90,11 +81,6 @@ class Generator(nn.Module):
         scores = self.output_layer(hiddens) # (batch_size, sequence_length, 2)
 
         return scores
-    
-
-
-# In[ ]:
-
 
 class SoftGenerator(nn.Module):
     
@@ -143,17 +129,6 @@ class SoftGenerator(nn.Module):
         
         return z
     
-
-
-# In[ ]:
-
-
-class BernoulliSoftGenerator(nn.Module):
-    pass
-
-
-# In[ ]:
-
 
 class DepRnnModel(nn.Module):
 
@@ -206,9 +181,6 @@ class DepRnnModel(nn.Module):
             hidden, _ = torch.nn.utils.rnn.pad_packed_sequence(hidden) #(length, batch_size, hidden_dim)
         
         return hidden.permute(1, 2, 0) #(batch_size, hidden_dim, sequence_length)
-
-
-# In[ ]:
 
 
 class DepGenerator(nn.Module):
