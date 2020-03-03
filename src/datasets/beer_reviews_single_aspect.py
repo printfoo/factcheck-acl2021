@@ -1,15 +1,10 @@
 # coding: utf-8
 
 
-import os
-import sys
-import gzip
-import random
-import numpy as np
-from colored import fg, attr, bg
-import json
+import os, gzip, json
 
-from datasets.dataset_loader import SentenceClassification, SentenceClassificationSet, SentenceClassificationSetSubSampling
+from datasets.dataset_loader import SentenceClassification
+from datasets.dataset_operator import SentenceClassificationSet, SentenceClassificationSetSubSampling
 
 
 class BeerReviewsSingleAspectWithTest(SentenceClassification):
@@ -155,25 +150,3 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
 
         return data_set
 
-
-if __name__ == "__main__":
-    test_case = 'beer'
-    
-    if test_case == 'beer': 
-        data_dir = "/dccstor/yum-dbqa/Rationale/deep-rationalization/beer_review/"
-
-        beer_data = BeerDatasetBinarySingleAspect(data_dir, score_threshold=0.6)
-
-        x_mat, y_vec, x_mask = beer_data.get_batch('dev', range(2), sort=False)
-#         x_mat, y_vec, z_mat, x_mask = beer_data.get_eval_batch(range(2), sort=False)
-        print(y_vec)
-#         print x_mask
-        print(x_mat[1])
-#         print z_mat[1]
-
-        print(beer_data.label_vocab)
-        beer_data.display_sentence(x_mat[0])
-        beer_data.display_sentence(x_mat[1])
-        
-#         beer_data.display_example(x_mat[0], z_mat[0])
-#         beer_data.display_example(x_mat[1], z_mat[1])
