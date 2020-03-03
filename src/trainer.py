@@ -25,7 +25,7 @@ run_args.command = " ".join(["python"] + sys.argv)
 from collections import deque
 from tqdm import tqdm
 
-from datasets.beer_dataset_single_aspect import BeerDatasetBinarySingleAspectWithTest
+from datasets.beer_reviews_single_aspect import BeerReviewsSingleAspectWithTest
 from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
 from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model_glue_for_acl
 
@@ -101,7 +101,7 @@ print(args_dict)
 # embedding_size = 100
 
 # Load data.
-beer_data = BeerDatasetBinarySingleAspectWithTest(run_args.data_dir, score_threshold=0.6, split_ratio=0.1)
+beer_data = BeerReviewsSingleAspectWithTest(run_args.data_dir, score_threshold=0.6, split_ratio=0.1)
 # TODO: handle save/load vocab here, for saving vocab, use the following, for loading, load embedding from checkpoint
 embedding_path = os.path.join(run_args.data_dir, "glove.6B.100d.txt")
 embeddings = beer_data.initial_embedding(args.embedding_dim, embedding_path)

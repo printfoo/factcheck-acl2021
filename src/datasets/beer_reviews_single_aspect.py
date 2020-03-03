@@ -12,34 +12,7 @@ import json
 from datasets.dataset_loader import SentenceClassification, SentenceClassificationSet, SentenceClassificationSetSubSampling
 
 
-class SentenceClassificationSetSubSampling(SentenceClassificationSet):
-    '''
-    '''
-    def __init__(self):
-        super(SentenceClassificationSetSubSampling, self).__init__()
-    
-    def split_datasets(self, ratio):
-        data_set_larger = SentenceClassificationSet()
-        data_set_smaller = SentenceClassificationSet()
-        for instance in self.instances:
-            if random.random() > ratio:
-                data_set_pointer = data_set_larger
-            else:
-                data_set_pointer = data_set_smaller
-                
-            label = instance['label']
-                
-            data_set_pointer.instances.append(instance)
-            if label not in data_set_pointer.label2instance_dict:
-                data_set_pointer.label2instance_dict[label] = {}
-
-            data_set_pointer.label2instance_dict[label][len(data_set_pointer.instances)] = 1
-            
-        return data_set_larger, data_set_smaller
-
-
-
-class BeerDatasetBinarySingleAspectWithTest(SentenceClassification):
+class BeerReviewsSingleAspectWithTest(SentenceClassification):
     def __init__(self, data_dir, truncate_num=300, freq_threshold=1, aspect=0, score_threshold=0.5, split_ratio=0.15):
         """
         This function initialize a dataset from Beer Review:
@@ -52,8 +25,8 @@ class BeerDatasetBinarySingleAspectWithTest(SentenceClassification):
         self.score_threshold = score_threshold
         self.aspect_names = ['apperance', 'aroma', 'palate', 'taste']
         self.split_ratio = split_ratio
-        
-        super(BeerDatasetBinarySingleAspectWithTest, self).__init__(data_dir, truncate_num, freq_threshold)
+
+        super(BeerReviewsSingleAspectWithTest, self).__init__(data_dir, truncate_num, freq_threshold)
         
         self.truncated_word_dict = None
         self.truncated_vocab = None
