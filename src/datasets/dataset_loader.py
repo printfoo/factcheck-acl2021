@@ -11,6 +11,11 @@ import json
 
 
 class TextDataset(object):
+    """
+    Generic text dataset loader.
+    This class needs to be overwrite for specific tasks.
+    """
+
     def __init__(self, data_dir):
         self.data_dir = data_dir
         
@@ -262,51 +267,6 @@ class SentenceClassification(TextDataset):
         print('Converting text to word indicies.')
         self.idx_2_word = self._index_to_word()
         
-        
-    def load_dataset(self):
-        
-        self.data_sets = {}
-        
-        # load train
-        self.data_sets['train'] = self._load_data_set(os.path.join(self.data_dir, 'train.fasttext'))
-        
-        # load dev
-        self.data_sets['dev'] = self._load_data_set(os.path.join(self.data_dir, 'dev.fasttext'))
-        self.data_sets['test'] = self._load_data_set(os.path.join(self.data_dir, 'test.fasttext'))
-        
-        # build vocab
-        self._build_vocab()
-        
-        
-    def _load_data_set(self, fpath):
-        """
-        Inputs: 
-            fpath -- the path of the file. 
-        Outputs:
-            positive_pairs -- a list of positive question-passage pairs
-            negative_pairs -- a list of negative question-passage pairs
-        """
-        
-        data_set = SentenceClassificationSet()
-        
-        f = open(fpath, "r")
-        instances = f.readlines()
-        
-        for idx, instance in enumerate(instances):
-            tokens = instance.strip('\n').split(' ')
-            label = tokens[0]
-            tokens = tokens[1:]
-            if label not in self.label_vocab:
-                self.label_vocab[label] = len(self.label_vocab)
-                label = self.label_vocab[label]
-            else:
-                label = self.label_vocab[label]
-            
-            data_set.add_one(tokens, label)
-            
-        data_set.print_info()
-
-        return data_set
     
     def _build_vocab(self):
         """

@@ -29,28 +29,6 @@ from datasets.beer_reviews_single_aspect import BeerReviewsSingleAspectWithTest
 from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
 from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model_glue_for_acl
 
-def display_example(dataset, x, z=None, threshold=0.9):
-    """
-    Given word a suquence of word index, and its corresponding rationale,
-    display it
-    Inputs:
-        x -- input sequence of word indices, (sequence_length,)
-        z -- input rationale sequence, (sequence_length,)
-        threshold -- display as rationale if z_i >= threshold
-    Outputs:
-        None
-    """
-    # apply threshold
-    condition = z >= threshold
-    for word_index, display_flag in zip(x, condition):
-        word = dataset.idx_2_word[word_index]
-        if display_flag:
-            output_word = "%s %s%s" %(fg(1), word, attr(0))
-            sys.stdout.write(output_word.decode('utf-8'))                
-        else:
-            sys.stdout.write(" " + word.decode('utf-8'))
-    sys.stdout.flush()
-
 
 class Argument():
     def __init__(self):
