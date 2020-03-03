@@ -520,3 +520,4 @@ def evaluate_model(classification_model, beer_data, args, dev_accs, dev_anti_acc
         print('highlighted:', z_predict, 'correct:', z_correct, 'precision:', z_correct/z_predict, 'recall:', z_correct/z_total)
         
     return best_dev_acc, best_dev_reward
+

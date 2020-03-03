@@ -4,21 +4,30 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+
+import sys, os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1" # (achtung-gpu) Use the 2nd GPU chip.
+
 import numpy as np
-import copy, random, sys, os
+import random
+torch.manual_seed(0) 
+np.random.seed(0)
+random.seed(0)
+
+import argparse
+parser = argparse.ArgumentParser()  # Catch augument from shell.
+parser.add_argument("--data_dir", type=str, required=True)
+parser.add_argument("--working_dir", type=str, required=True)
+run_args, extras = parser.parse_known_args()
+run_args.extras = extras
+run_args.command = " ".join(["python"] + sys.argv)
+
 from collections import deque
 from tqdm import tqdm
 
-from datasets.beer_dataset_single_aspect import BeerDatasetBinarySingleAspect, BeerDatasetBinarySingleAspectWithTest
+from datasets.beer_dataset_single_aspect import BeerDatasetBinarySingleAspectWithTest
 from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
 from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model_glue_for_acl
-
-# (achtung-gpu) Use the 2nd GPU chip.
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
-torch.manual_seed(9527)
-np.random.seed(9527)
-random.seed(9527)
 
 def display_example(dataset, x, z=None, threshold=0.9):
     """
@@ -42,9 +51,6 @@ def display_example(dataset, x, z=None, threshold=0.9):
             sys.stdout.write(" " + word.decode('utf-8'))
     sys.stdout.flush()
 
-
-data_dir = "data/"
-beer_data = BeerDatasetBinarySingleAspectWithTest(data_dir, score_threshold=0.6, split_ratio=0.1)
 
 class Argument():
     def __init__(self):
@@ -85,7 +91,7 @@ class Argument():
         self.with_lm = False
         self.batch_size_ngram_eval = 5
         self.lr=0.001
-        self.working_dir = 'tmp'
+        self.working_dir = run_args.working_dir
         self.model_prefix = 'tmp.%s.highlight%.2f.cont%.2f'%(self.game_mode, self.highlight_percentage, self.lambda_continuity)
         self.pre_trained_model_prefix = 'pre_trained_cls.model'
 
@@ -94,8 +100,10 @@ args_dict = vars(args)
 print(args_dict)
 # embedding_size = 100
 
+# Load data.
+beer_data = BeerDatasetBinarySingleAspectWithTest(run_args.data_dir, score_threshold=0.6, split_ratio=0.1)
 # TODO: handle save/load vocab here, for saving vocab, use the following, for loading, load embedding from checkpoint
-embedding_path = "../data/glove.6B.100d.txt"
+embedding_path = os.path.join(run_args.data_dir, "glove.6B.100d.txt")
 embeddings = beer_data.initial_embedding(args.embedding_dim, embedding_path)
 
 args.num_labels = len(beer_data.label_vocab)
