@@ -8,7 +8,7 @@ from colored import fg, attr, bg
 
 class SentenceClassification(object):
     """
-    Generic data loader for sentence classification tasks.
+    Generic dataset loader for sentence classification tasks.
     Functions need overwriting for a specific dataset.
     """
 
@@ -17,13 +17,13 @@ class SentenceClassification(object):
         self.truncate_num = truncate_num
         self.freq_threshold = freq_threshold
         
-        self.word_vocab = {'<PAD>':0, '<START>':1, '<END>':2, '<UNK>':3}
+        self.word_vocab = {"<PAD>": 0, "<START>": 1, "<END>": 2, "<UNK>": 3}
         self.label_vocab = {}
         self.load_dataset()
 
-        print('Converting text to word indicies.')
+        print("Converting text to word indicies.")
         self.idx_2_word = self._index_to_word()
-        
+
     def _index_to_word(self):
         """
         Apply reverse operation of word to index.
@@ -107,13 +107,22 @@ class SentenceClassification(object):
             embeddings -- a numpy matrix in shape of (vocab_size, embedding_dim)
                           the ith row indicates the word with index i from word_ind_dict
         """
-        vocab_size = len(self.word_vocab)
-        # initialize a numpy embedding matrix
-        embeddings = 0.1*np.random.randn(vocab_size, embedding_size).astype(np.float32)
-        # replace <PAD> by all zero
-        embeddings[0, :] = np.zeros(embedding_size, dtype=np.float32)
 
-        if embedding_path and os.path.isfile(embedding_path):
+        # Initialize a numpy embedding matrix.
+        embeddings = 0.1 * np.random.randn(len(self.word_vocab), embedding_size).astype(np.float32)
+
+        # Replace <PAD> by all zeros.
+        embeddings[self.word_vocab["<PAD>"], :] = np.zeros(embedding_size, dtype=np.float32)
+
+        # Load pre-trained embeddings if specified.
+        if not embedding_path:
+            print("No specified embedding file.")
+            print("Embedding are randomly initialized.")
+        elif not os.path.isfile(embedding_path):
+            print("Specified embedding file does not exist:", embedding_path)
+            print("Embedding are randomly initialized.")
+        else:
+            print("Loading embeddings from:", embedding_path)
             f = open(embedding_path, "r")
             counter = 0
             for line in f:
@@ -125,9 +134,7 @@ class SentenceClassification(object):
                     embeddings[self.word_vocab[word], :] = embedding
                     counter += 1
             f.close()
-            print("%d words has been switched."%counter)
-        else:
-            print("embedding is initialized fully randomly.")
+            print("%d embeddings are initialized." % counter)
 
         return embeddings
 
