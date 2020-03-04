@@ -1,34 +1,44 @@
 # coding: utf-8
 
+
+# Torch.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+# (achtung-gpu) Use the 2nd GPU chip.
 import sys, os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1" # (achtung-gpu) Use the 2nd GPU chip.
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+# Set random seeds.
 import numpy as np
 import random
-torch.manual_seed(0) 
+torch.manual_seed(0)  # Set random seeds.
 np.random.seed(0)
 random.seed(0)
 
+# Catch passed auguments from run script.
 import argparse
-parser = argparse.ArgumentParser()  # Catch augument from shell.
+parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, required=True)
-parser.add_argument("--embedding_dir", type=str, required=True)
 parser.add_argument("--working_dir", type=str, required=True)
+parser.add_argument("--data_name", type=str, required=True)
+parser.add_argument("--embedding_name", type=str, required=True)
 run_args, extras = parser.parse_known_args()
+print(run_args)
 run_args.extras = extras
 run_args.command = " ".join(["python"] + sys.argv)
 
-from collections import deque
-from tqdm import tqdm
+# Import specified dataset loader.
+import importlib
+dataset = importlib.import_module("datasets." + run_args.data_name)
 
-from datasets.beer_reviews_single_aspect import BeerReviewsSingleAspectWithTest
 from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
 from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model_glue_for_acl
+
+from collections import deque
+from tqdm import tqdm
 
 
 class Argument():
@@ -80,9 +90,11 @@ print(args_dict)
 # embedding_size = 100
 
 # Load data.
-beer_data = BeerReviewsSingleAspectWithTest(run_args.data_dir, score_threshold=0.6, split_ratio=0.1)
+data_path = os.path.join(run_args.data_dir, run_args.data_name)
+beer_data = dataset.DataLoader(data_path, score_threshold=0.6, split_ratio=0.1)
+
 # TODO: handle save/load vocab here, for saving vocab, use the following, for loading, load embedding from checkpoint
-embedding_path = os.path.join(run_args.embedding_dir, "glove.6B.100d.txt")
+embedding_path = os.path.join(run_args.data_dir, run_args.embedding_name)
 # embeddings = beer_data.initial_embedding(args.embedding_dim, embedding_path)
 embeddings = beer_data.initial_embedding(args.embedding_dim)
 

@@ -7,7 +7,7 @@ from datasets.dataset_loader import SentenceClassification
 from datasets.dataset_operator import SentenceClassificationSet, SentenceClassificationSetSplit
 
 
-class BeerReviewsSingleAspectWithTest(SentenceClassification):
+class DataLoader(SentenceClassification):
     """
     Dataset loader for beer reviews.
     Inherited from datasets.dataset_loader.SentenceClassification.
@@ -29,7 +29,7 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
         self.aspect_names = ["apperance", "aroma", "palate", "taste"]
         self.split_ratio = split_ratio
         self.data_sets = {}
-        super(BeerReviewsSingleAspectWithTest, self).__init__(data_dir, truncate_num, freq_threshold)
+        super(DataLoader, self).__init__(data_dir, truncate_num, freq_threshold)
         
     def load_dataset(self):
         """
