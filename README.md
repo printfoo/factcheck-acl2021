@@ -1,7 +1,7 @@
 # NLP rationalization.
 Run:
 ```
-./run.sh
+python src/run.py
 ```
 
 Based on:  
