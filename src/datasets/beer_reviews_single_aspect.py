@@ -23,37 +23,6 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
 
         super(BeerReviewsSingleAspectWithTest, self).__init__(data_dir, truncate_num, freq_threshold)
         
-        self.truncated_word_dict = None
-        self.truncated_vocab = None
-        
-        
-    def _init_lm_output_vocab(self, truncate_freq=4):
-        word_freq_dict = self._get_word_freq({'train':self.data_sets['train']})
-        print('size of the raw vocabulary on training: %d'% len(word_freq_dict))
-        print('size of the raw vocabulary on training: %d'% len(self.idx_2_word))
-
-        self.truncated_word_dict = {0:0, 1:1, 2:2, 3:3}
-        self.truncated_vocab = ['<PAD>', '<START>', '<END>', '<UNK>']
-
-        for wid, word in self.idx_2_word.items():
-            if wid < 4:
-                continue
-            elif word not in word_freq_dict:
-                self.truncated_word_dict[wid] = self.truncated_word_dict[self.word_vocab['<UNK>']]
-            else:
-                if word_freq_dict[word] >= truncate_freq:
-                    self.truncated_word_dict[wid] = len(self.truncated_vocab)
-                    self.truncated_vocab.append(word)
-                else:
-                    self.truncated_word_dict[wid] = self.truncated_word_dict[self.word_vocab['<UNK>']]
-
-        tmp_dict = {}
-        for word, wid in self.truncated_word_dict.items():
-            if wid not in tmp_dict:
-                tmp_dict[wid] = 1
-        print('size of the truncated vocabulary on training: %d'%len(tmp_dict))
-        print('size of the truncated vocabulary on training: %d'%len(self.truncated_vocab))
-        
         
     def load_dataset(self):
         
@@ -66,7 +35,7 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
         # load train
         tmp_dataset = self._load_data_set(os.path.join(self.data_dir, 
                                                        'reviews.aspect{:d}.train.txt.gz'.format(self.aspect)),
-                                         with_dev=True)
+                                          with_dev=True)
         
         print('splitting with %.2f'%self.split_ratio)
         self.data_sets['train'], self.data_sets['dev'] = tmp_dataset.split_datasets(self.split_ratio)
@@ -149,4 +118,3 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
         data_set.print_info()
 
         return data_set
-

@@ -3,7 +3,7 @@
 __pycache__
 
 # Word embeddings.
-data/glove.6B*
+data/glove/*
 
 # Temporary files.
 tmp/*
