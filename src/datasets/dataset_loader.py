@@ -22,13 +22,9 @@ class SentenceClassification(object):
         self.load_dataset()
 
         print("Converting text to word indicies.")
-        self.idx_2_word = self._index_to_word()
+        self.idx_2_word = {value: key for key, value in self.word_vocab.items()}
+        self.idx2label = {val: key for key, val in self.label_vocab.items()}
 
-    def _index_to_word(self):
-        """
-        Apply reverse operation of word to index.
-        """
-        return {value: key for key, value in self.word_vocab.items()}
 
     def _build_vocab(self):
         """

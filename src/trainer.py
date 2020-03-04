@@ -83,8 +83,8 @@ print(args_dict)
 beer_data = BeerReviewsSingleAspectWithTest(run_args.data_dir, score_threshold=0.6, split_ratio=0.1)
 # TODO: handle save/load vocab here, for saving vocab, use the following, for loading, load embedding from checkpoint
 embedding_path = os.path.join(run_args.embedding_dir, "glove.6B.100d.txt")
-embeddings = beer_data.initial_embedding(args.embedding_dim, embedding_path)
-# embeddings = beer_data.initial_embedding(args.embedding_dim)
+# embeddings = beer_data.initial_embedding(args.embedding_dim, embedding_path)
+embeddings = beer_data.initial_embedding(args.embedding_dim)
 
 args.num_labels = len(beer_data.label_vocab)
 print('num_labels: ', args.num_labels)
