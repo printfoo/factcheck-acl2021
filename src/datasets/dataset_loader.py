@@ -35,12 +35,11 @@ class SentenceClassification(object):
         self.idx_2_word = {val: key for key, val in self.word_vocab.items()}
         self.idx2label = {val: key for key, val in self.label_vocab.items()}
 
-
     def _build_vocab(self):
         """
         Filter the vocabulary and index words.
         This stores:
-            data_set.pairs -- a list of [{"sentence": [wid1, wid2, ...], "label": 1}, ...] 
+            data_set.pairs -- a list of [{"sentence": [wid1, wid2, ...], "label": 1}, ...].
         """
         
         # Add vocab one by one from sentence.
@@ -83,7 +82,7 @@ class SentenceClassification(object):
         """
         Build word frequency dictionary from sentence pairs.
         Outputs:
-            word_freq_dict -- raw vocabulary
+            word_freq_dict -- raw vocabulary.
         """
 
         # Add vocab one by one from sentence.
@@ -104,19 +103,18 @@ class SentenceClassification(object):
 
         print('Size of the raw vocabulary:', len(word_freq_dict))
         return word_freq_dict
-    
-   
+     
     def initial_embedding(self, embedding_size, embedding_path=None):
         """
         This function initialize embedding with glove embedding.
         If a word has embedding in glove, use the glove one.
         If not, initial with random.
         Inputs:
-            embedding_size -- the dimension of the word embedding
-            embedding_path -- the path to the glove embedding file
+            embedding_size -- the dimension of the word embedding.
+            embedding_path -- the path to the glove embedding file.
         Outputs:
-            embeddings -- a numpy matrix in shape of (vocab_size, embedding_dim)
-                          the ith row indicates the word with index i from word_ind_dict
+            embeddings -- a numpy matrix in shape of (vocab_size, embedding_dim),
+                          the ith row indicates the word with index i from word_ind_dict.
         """
 
         # Initialize a numpy embedding matrix.
@@ -149,16 +147,15 @@ class SentenceClassification(object):
 
         return embeddings
 
-
     def get_train_batch(self, batch_size, sort=False):
         """
-        Randomly select a batch from a dataset to train.
+        Randomly sample a batch to train.
         Inputs:
             batch_size: an integer for barch size.
         Outputs:
-            q_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch)
-            p_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch)
-            y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,)
+            x_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch).
+            y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,).
+            x_mask -- numpy array in shape of (batch_size, max length of the sequence in the batch).
         """
         
         set_id = "train"
@@ -168,7 +165,16 @@ class SentenceClassification(object):
         return self.get_batch(set_id, batch_idx, sort)
     
     def get_batch(self, set_id, batch_idx, sort=False):
-        
+        """
+        Randomly sample a batch to train.
+        Inputs:
+            batch_size: an integer for barch size.
+        Outputs:
+            x_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch).
+            y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,).
+            x_mask -- numpy array in shape of (batch_size, max length of the sequence in the batch).
+        """
+
         data_set = self.data_sets[set_id]
         xs_, ys_, max_x_len_ = data_set.get_samples_from_one_list(batch_idx, self.truncate_num)
 
@@ -194,9 +200,9 @@ class SentenceClassification(object):
         """
         Display sentences and rationales.
         Inputs:
-            x -- input sequence of word indices, (sequence_length,)
-            z -- input rationale sequence, (sequence_length,)
-            threshold -- display as rationale if z_i >= threshold
+            x -- input sequence of word indices, (sequence_length,).
+            z -- input rationale sequence, (sequence_length,).
+            threshold -- display as rationale if z_i >= threshold.
         """
         condition = z >= threshold
         for word_index, display_flag in zip(x, condition):

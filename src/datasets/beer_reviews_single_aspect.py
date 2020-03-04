@@ -30,7 +30,6 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
         self.split_ratio = split_ratio
         self.data_sets = {}
         super(BeerReviewsSingleAspectWithTest, self).__init__(data_dir, truncate_num, freq_threshold)
-
         
     def load_dataset(self):
         """
@@ -58,8 +57,6 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
 
         # Build vocab.
         self._build_vocab()
-        print(self.data_sets[data_set].instances)
-        print(self.data_sets[data_set].pairs)
         
     def _load_dataset_helper(self, fpath, with_dev=False):
         """
