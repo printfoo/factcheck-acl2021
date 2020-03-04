@@ -4,7 +4,7 @@
 import os, gzip, json
 
 from datasets.dataset_loader import SentenceClassification
-from datasets.dataset_operator import SentenceClassificationSet, SentenceClassificationSetSubSampling
+from datasets.dataset_operator import SentenceClassificationSet, SentenceClassificationSetSplit
 
 
 class BeerReviewsSingleAspectWithTest(SentenceClassification):
@@ -58,7 +58,8 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
 
         # Build vocab.
         self._build_vocab()
-        
+        print(self.data_sets[data_set].instances)
+        print(self.data_sets[data_set].pairs)
         
     def _load_dataset_helper(self, fpath, with_dev=False):
         """
@@ -71,7 +72,7 @@ class BeerReviewsSingleAspectWithTest(SentenceClassification):
         """
         
         if with_dev:  # Split to train and dev sets.
-            data_set = SentenceClassificationSetSubSampling()
+            data_set = SentenceClassificationSetSplit()
         else:  # Train set only.
             data_set = SentenceClassificationSet()
         

@@ -129,12 +129,16 @@ class SentenceClassificationSet(object):
             print('Number of instances with label%d:'%k, len(v))
 
 
+class SentenceClassificationSetSplit(SentenceClassificationSet):
+    """
+    Split to train/dev set of SentenceClassificationSet.
+    Outputs:
+        data_set_larger -- train set.
+        data_set_smaller -- dev set.
+    """
 
-class SentenceClassificationSetSubSampling(SentenceClassificationSet):
-    '''
-    '''
     def __init__(self):
-        super(SentenceClassificationSetSubSampling, self).__init__()
+        super(SentenceClassificationSetSplit, self).__init__()
 
     def split_datasets(self, ratio):
         data_set_larger = SentenceClassificationSet()
@@ -145,7 +149,7 @@ class SentenceClassificationSetSubSampling(SentenceClassificationSet):
             else:
                 data_set_pointer = data_set_smaller
 
-            label = instance['label']
+            label = instance["label"]
 
             data_set_pointer.instances.append(instance)
             if label not in data_set_pointer.label2instance_dict:

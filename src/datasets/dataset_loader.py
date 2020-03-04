@@ -12,45 +12,58 @@ class SentenceClassification(object):
     Functions need overwriting for a specific dataset.
     """
 
-    def __init__(self, data_dir, truncate_num=300, freq_threshold=1):        
+    def __init__(self, data_dir, truncate_num=300, freq_threshold=1):
+        """
+        Initialize a dataset for sentence classification:
+        Inputs:
+            data_dir -- the directory of the dataset.
+            truncate_num -- max length for tokens.
+            freq_threshold -- min frequency for tokens.
+            split_ratio -- split ratio for train/dev.
+        """
         self.data_dir = data_dir
         self.truncate_num = truncate_num
         self.freq_threshold = freq_threshold
         
         self.word_vocab = {"<PAD>": 0, "<START>": 1, "<END>": 2, "<UNK>": 3}
         self.label_vocab = {}
+
+        print("Loading dataset.")
         self.load_dataset()
 
-        print("Converting text to word indicies.")
-        self.idx_2_word = {value: key for key, value in self.word_vocab.items()}
+        print("Converting token to indexes.")
+        self.idx_2_word = {val: key for key, val in self.word_vocab.items()}
         self.idx2label = {val: key for key, val in self.label_vocab.items()}
 
 
     def _build_vocab(self):
         """
-        Filter the vocabulary and numeralization
+        Filter the vocabulary and index words.
+        This stores:
+            data_set.pairs -- a list of [{"sentence": [wid1, wid2, ...], "label": 1}, ...] 
         """
         
+        # Add vocab one by one from sentence.
         def _add_vocab_from_sentence(word_freq_dict, sentence):
-            tokens = sentence.split(' ')
+            tokens = sentence.split(" ")
             word_idx_list = []
             for token in tokens:
                 if word_freq_dict[token] < self.freq_threshold:
-                    word_idx_list.append(self.word_vocab['<UNK>'])
+                    word_idx_list.append(self.word_vocab["<UNK>"])
                 else:
                     if token not in self.word_vocab:
                         self.word_vocab[token] = len(self.word_vocab)
                     word_idx_list.append(self.word_vocab[token])
             return word_idx_list
         
-        # numeralize passages in training pair lists
-        def _numeralize_pairs(word_freq_dict, pairs):
+        # Index words in sentence for training pairs.
+        def _index_words(word_freq_dict, pairs):
             ret_pair_list = []
             for pair_dict_ in pairs:
                 new_pair_dict_ = {}
                 
                 for k, v in pair_dict_.items():
-                    if k == 'sentence':
+                    if k == "sentence":
                         new_pair_dict_[k] = _add_vocab_from_sentence(word_freq_dict, v)
                     else:
                         new_pair_dict_[k] = pair_dict_[k] 
@@ -58,22 +71,24 @@ class SentenceClassification(object):
                 ret_pair_list.append(new_pair_dict_)
             return ret_pair_list
         
-        
         word_freq_dict = self._get_word_freq(self.data_sets)
             
         for data_id, data_set in self.data_sets.items():
-            data_set.pairs = _numeralize_pairs(word_freq_dict, data_set.get_pairs())
+            data_set.pairs = _index_words(word_freq_dict, data_set.get_pairs())
 
-        print('size of the final vocabulary:', len(self.word_vocab))
+        print('Size of the final vocabulary:', len(self.word_vocab))
         
         
     def _get_word_freq(self, data_sets_):
         """
-        Building word frequency dictionary and filter the vocabulary
+        Build word frequency dictionary from sentence pairs.
+        Outputs:
+            word_freq_dict -- raw vocabulary
         """
-        
+
+        # Add vocab one by one from sentence.
         def _add_freq_from_sentence(word_freq_dict, sentence):
-            tokens = sentence.split(' ')
+            tokens = sentence.split(" ")
             for token in tokens:
                 if token not in word_freq_dict:
                     word_freq_dict[token] = 1
@@ -84,10 +99,10 @@ class SentenceClassification(object):
 
         for data_id, data_set in data_sets_.items():
             for pair_dict in data_set.get_pairs():
-                sentence = pair_dict['sentence']
+                sentence = pair_dict["sentence"]
                 _add_freq_from_sentence(word_freq_dict, sentence)
 
-        print('size of the raw vocabulary:', len(word_freq_dict))
+        print('Size of the raw vocabulary:', len(word_freq_dict))
         return word_freq_dict
     
    
@@ -137,16 +152,16 @@ class SentenceClassification(object):
 
     def get_train_batch(self, batch_size, sort=False):
         """
-        randomly select a batch from a dataset
+        Randomly select a batch from a dataset to train.
         Inputs:
-            batch_size: 
+            batch_size: an integer for barch size.
         Outputs:
             q_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch)
             p_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch)
             y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,)
         """
         
-        set_id = 'train'
+        set_id = "train"
         data_set = self.data_sets[set_id]
         batch_idx = np.random.randint(0, data_set.size(), size=batch_size)
         
@@ -166,8 +181,7 @@ class SentenceClassification(object):
         x_mask = np.array(x_masks_, dtype=np.int64)
         y_vec = np.array(ys_, dtype=np.int64)
         
-        if sort:
-            # sort all according to q_length
+        if sort:  # Sort all according to q_length.
             x_length = np.sum(x_mask, axis=1)
             x_sort_idx = np.argsort(-x_length)
             x_mat = x_mat[x_sort_idx, :]
@@ -178,21 +192,17 @@ class SentenceClassification(object):
 
     def display_example(self, x, z=None, threshold=0.9):
         """
-        Given word a suquence of word index, and its corresponding rationale,
-        display it
+        Display sentences and rationales.
         Inputs:
             x -- input sequence of word indices, (sequence_length,)
             z -- input rationale sequence, (sequence_length,)
             threshold -- display as rationale if z_i >= threshold
-        Outputs:
-            None
         """
-        # apply threshold
         condition = z >= threshold
         for word_index, display_flag in zip(x, condition):
             word = self.idx_2_word[word_index]
             if display_flag:
-                output_word = "%s %s%s" %(fg(1), word, attr(0))
+                output_word = "%s %s%s" % (fg(1), word, attr(0))
                 sys.stdout.write(output_word)
             else:
                 sys.stdout.write(" " + word)

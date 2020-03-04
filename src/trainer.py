@@ -43,7 +43,7 @@ class Argument():
         self.z_dim = 2
         self.gumbel_temprature = 0.1
         self.cuda = True
-        self.batch_size = 40
+        self.batch_size = 32
         self.mlp_hidden_dim = 50
         self.dropout_rate = 0.4
         self.use_relative_pos = True
