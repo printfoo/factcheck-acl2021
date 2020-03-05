@@ -47,12 +47,7 @@ def _get_pos_neg_sparsity(z, mask, none_relation):
     return pos_sparsity_ratio, neg_sparsity_ratio, pos_count, neg_count
 
 
-def copy_classifier_module(trg_module, enc_path, pred_path):
-    trg_module.encoder = torch.load(enc_path)
-    trg_module.predictor = torch.load(pred_path)
-
-
-def evaluate_rationale_model_glue_for_acl(classification_model, beer_data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, print_train_flag=True, eval_test=False):
+def evaluate_rationale_model_glue(classification_model, beer_data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, print_train_flag=True, eval_test=False):
     classification_model.eval()
     eval_sets = ['dev']
     if eval_test:
@@ -151,7 +146,7 @@ def evaluate_rationale_model_glue_for_acl(classification_model, beer_data, args,
     return best_dev_acc
 
 
-def evaluate_rationale_model_glue_for_acl_with_test(classification_model, beer_data, args, dev_accs, test_accs, dev_anti_accs, test_anti_accs, dev_cls_accs, best_dev_acc, eval_accs, print_train_flag=True):
+def evaluate_rationale_model_glue_with_test(classification_model, beer_data, args, dev_accs, test_accs, dev_anti_accs, test_anti_accs, dev_cls_accs, best_dev_acc, eval_accs, print_train_flag=True):
     classification_model.eval()
     eval_sets = ['dev', 'test']
     for set_id, set_name in enumerate(eval_sets):

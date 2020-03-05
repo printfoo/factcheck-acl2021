@@ -48,6 +48,9 @@ parser.add_argument("--batch_size_ngram_eval", type=int, default=5)
 parser.add_argument("--lr", type=float, default=0.001)
 parser.add_argument("--model_prefix", type=str, default="models")
 parser.add_argument("--pre_trained_model_prefix", type=str, default="pre_trained_cls.model")
+parser.add_argument("--num_iteration", type=int, default=50)
+parser.add_argument("--display_iteration", type=int, default=50)
+parser.add_argument("--test_iteration", type=int, default=50)
 args, extras = parser.parse_known_args()
 print("Arguments:", args)
 args.extras = extras
@@ -72,7 +75,7 @@ import importlib
 dataset = importlib.import_module("datasets." + args.data_name)
 
 from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
-from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model_glue_for_acl
+from utils.trainer_utils import evaluate_rationale_model_glue
 
 from collections import deque
 from tqdm import tqdm
@@ -87,28 +90,17 @@ print("Data successfully loaded:", data)
 if args.embedding_name:
     embedding_path = os.path.join(args.data_dir, args.embedding_name)
     embeddings = data.initial_embedding(args.embedding_dim, embedding_path)
-    print("Embeddings successfully loaded:", embeddings)
+    print("Embeddings successfully loaded:", embeddings.shape)
 else:
     embeddings = data.initial_embedding(args.embedding_dim)
-    print("Embeddings successfully initialized:", embeddings)
+    print("Embeddings successfully initialized:", embeddings.shape)
 
 # Initialize model.
-classification_model = HardRationale3PlayerClassificationModelForEmnlp(embeddings, args)
-if args.cuda:
-    classification_model.cuda()
-classification_model.count_tokens = args.count_tokens
-classification_model.count_pieces = args.count_pieces
-print("Model successfully initialized:", classification_model)
+model = HardRationale3PlayerClassificationModelForEmnlp(embeddings, args)
+print("Model successfully initialized:", model)
 
 
-beer_data = data
-
-
-classification_model.init_C_model()
-
-classification_model.fixed_E_anti = args.fixed_E_anti
-
-print('training with game mode:', classification_model.game_mode)
+print('training with game mode:', model.game_mode)
 
 train_losses = []
 train_accs = []
@@ -120,9 +112,9 @@ test_anti_accs = [0.0]
 test_cls_accs = [0.0]
 best_dev_acc = 0.0
 best_test_acc = 0.0
-num_iteration = 10
-display_iteration = 10
-test_iteration = 10
+num_iteration = args.num_iteration
+display_iteration = args.display_iteration
+test_iteration = args.test_iteration
 
 eval_accs = [0.0]
 eval_anti_accs = [0.0]
@@ -131,17 +123,23 @@ queue_length = 200
 z_history_rewards = deque(maxlen=queue_length)
 z_history_rewards.append(0.)
 
-classification_model.init_optimizers()
-classification_model.init_rl_optimizers()
-classification_model.init_reward_queue()
+if args.cuda:
+    model.cuda()
+model.count_tokens = args.count_tokens
+model.count_pieces = args.count_pieces
+model.init_C_model()
+model.fixed_E_anti = args.fixed_E_anti
+model.init_optimizers()
+model.init_rl_optimizers()
+model.init_reward_queue()
 
-old_E_anti_weights = classification_model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
-classification_model.train()
+old_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
 
 for i in tqdm(range(num_iteration)):
+    model.train()
 
     # sample a batch of data
-    x_mat, y_vec, x_mask = beer_data.get_train_batch(batch_size=args.batch_size, sort=True)
+    x_mat, y_vec, x_mask = data.get_train_batch(batch_size=args.batch_size, sort=True)
 
     batch_x_ = Variable(torch.from_numpy(x_mat))
     batch_m_ = Variable(torch.from_numpy(x_mask)).type(torch.FloatTensor)
@@ -156,10 +154,10 @@ for i in tqdm(range(num_iteration)):
         z_baseline = z_baseline.cuda()
     
     if not args.with_lm:
-        losses, predict, anti_predict, z, z_rewards, continuity_loss, sparsity_loss = classification_model.train_one_step(
+        losses, predict, anti_predict, z, z_rewards, continuity_loss, sparsity_loss = model.train_one_step(
             batch_x_, batch_y_, z_baseline, batch_m_, with_lm=False)
     else:
-        losses, predict, anti_predict, z, z_rewards, continuity_loss, sparsity_loss = classification_model.train_one_step(
+        losses, predict, anti_predict, z, z_rewards, continuity_loss, sparsity_loss = model.train_one_step(
             batch_x_, batch_y_, z_baseline, batch_m_, with_lm=True)
     
     z_batch_reward = np.mean(z_rewards.cpu().data.numpy())
@@ -174,12 +172,12 @@ for i in tqdm(range(num_iteration)):
     train_losses.append(losses['e_loss'])
     
     if args.fixed_E_anti == True:
-        new_E_anti_weights = classification_model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
+        new_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
         assert (old_E_anti_weights == new_E_anti_weights).all(), 'E anti model changed'
     
     if (i+1) % display_iteration == 0:
-        print('sparsity lambda: %.4f'%(classification_model.lambda_sparsity))
-        print('highlight percentage: %.4f'%(classification_model.highlight_percentage))
+        print('sparsity lambda: %.4f'%(model.lambda_sparsity))
+        print('highlight percentage: %.4f'%(model.highlight_percentage))
         print('supervised_loss %.4f, sparsity_loss %.4f, continuity_loss %.4f'%(losses['e_loss'], torch.mean(sparsity_loss).cpu().data, torch.mean(continuity_loss).cpu().data))
         if args.with_lm:
             print('lm prob: %.4f'%losses['lm_prob'])
@@ -193,20 +191,21 @@ for i in tqdm(range(num_iteration)):
 
         z_b = torch.zeros_like(z)
         z_b_ = z_b.cpu().data[2,:]
-        print('gold label:', beer_data.idx2label[y_], 'pred label:', beer_data.idx2label[pred_.item()])
-        beer_data.display_example(x_, z_)
+        print('gold label:', data.idx2label[y_], 'pred label:', data.idx2label[pred_.item()])
+        data.display_example(x_, z_)
 
     if (i+1) % test_iteration == 0:
-        new_best_dev_acc = evaluate_rationale_model_glue_for_acl(classification_model, beer_data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, print_train_flag=False)
-        
-        new_best_test_acc = evaluate_rationale_model_glue_for_acl(classification_model, beer_data, args, test_accs, test_anti_accs, test_cls_accs, best_test_acc, print_train_flag=False, eval_test=True)
 
+        # Eval dev set.
+        new_best_dev_acc = evaluate_rationale_model_glue(model, data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, print_train_flag=False)
         if new_best_dev_acc > best_dev_acc:
             best_dev_acc = new_best_dev_acc
             snapshot_path = os.path.join(args.working_dir, args.model_prefix + '.state_dict.bin')
             print('new best dev:', new_best_dev_acc, 'model saved at', snapshot_path)
-            torch.save(classification_model.state_dict(), snapshot_path)
+            torch.save(model.state_dict(), snapshot_path)
 
+        # Eval test set.
+        new_best_test_acc = evaluate_rationale_model_glue(model, data, args, test_accs, test_anti_accs, test_cls_accs, best_test_acc, print_train_flag=False, eval_test=True)
         if new_best_test_acc > best_test_acc:
             best_test_acc = new_best_test_acc
 
