@@ -6,4 +6,4 @@ __pycache__
 data/glove/*
 
 # Trained models.
-models/*
+models/*.bin
