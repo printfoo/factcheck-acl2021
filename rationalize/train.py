@@ -2,12 +2,13 @@
 
 
 # Catch passed auguments from run script.
-import argparse, sys
+import sys, os
+import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, default="data")
-parser.add_argument("--working_dir", type=str, default="tmp")
+parser.add_argument("--working_dir", type=str, default="models")
 parser.add_argument("--data_name", type=str, default="beer_reviews_single_aspect")
-parser.add_argument("--embedding_name", type=str, default="glove/glove.6B.100d.txt")
+parser.add_argument("--embedding_name", type=str, default="")
 parser.add_argument("--model_type", type=str, default="RNN")
 parser.add_argument("--cell_type", type=str, default="GRU")
 parser.add_argument("--hidden_dim", type=int, default=400)
@@ -25,7 +26,7 @@ parser.add_argument("--use_relative_pos", type=bool, default=True)
 parser.add_argument("--max_pos_num", type=int, default=20)
 parser.add_argument("--pos_embedding_dim", type=int, default=-1)
 parser.add_argument("--fixed_classifier", type=bool, default=True)
-parser.add_argument("--fixed_E_anti", type=bool, default=True)
+parser.add_argument("--fixed_E_anti", type=bool, default=False)
 parser.add_argument("--lambda_sparsity", type=float, default=1.0)
 parser.add_argument("--lambda_continuity", type=float, default=1.0)
 parser.add_argument("--lambda_anti", type=float, default=1.0)
@@ -45,7 +46,7 @@ parser.add_argument("--ngram", type=int, default=4)
 parser.add_argument("--with_lm", type=bool, default=False)
 parser.add_argument("--batch_size_ngram_eval", type=int, default=5)
 parser.add_argument("--lr", type=float, default=0.001)
-parser.add_argument("--model_prefix", type=str, default="tmp")
+parser.add_argument("--model_prefix", type=str, default="models")
 parser.add_argument("--pre_trained_model_prefix", type=str, default="pre_trained_cls.model")
 args, extras = parser.parse_known_args()
 print("Arguments:", args)
@@ -57,10 +58,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-
-# (achtung-gpu) Use the 2nd GPU chip.
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1" # (achtung-gpu) Use the 2nd GPU.
 
 # Set random seeds.
 import numpy as np
@@ -79,124 +77,36 @@ from utils.trainer_utils import copy_classifier_module, evaluate_rationale_model
 from collections import deque
 from tqdm import tqdm
 
-"""
-class Argument():
-    def __init__(self):
-        self.model_type = 'RNN'
-        self.cell_type = 'GRU'
-        self.hidden_dim = 400
-        self.embedding_dim = 100
-        self.kernel_size = 5
-        self.layer_num = 1
-        self.fine_tuning = False
-        self.z_dim = 2
-        self.gumbel_temprature = 0.1
-        self.cuda = True
-        self.batch_size = 32
-        self.mlp_hidden_dim = 50
-        self.dropout_rate = 0.4
-        self.use_relative_pos = True
-        self.max_pos_num = 20
-        self.pos_embedding_dim = -1
-        self.fixed_classifier = True
-        self.fixed_E_anti = True
-        self.lambda_sparsity = 1.0
-        self.lambda_continuity = 1.0
-        self.lambda_anti = 1.0
-        self.lambda_pos_reward = 0.1
-        self.exploration_rate = 0.05
-        self.highlight_percentage = 0.3
-        self.highlight_count = 8
-        self.count_tokens = 8
-        self.count_pieces = 4
-        self.lambda_acc_gap = 1.2
-        self.label_embedding_dim = 400
-        self.game_mode = '3player'
-        self.margin = 0.2
-        self.lm_setting = 'multiple' # 'single'
-        self.lambda_lm = 1.0 # 100.0
-        self.ngram = 4
-        self.with_lm = False
-        self.batch_size_ngram_eval = 5
-        self.lr=0.001
-        self.working_dir = run_args.working_dir
-        self.model_prefix = 'tmp.%s.highlight%.2f.cont%.2f'%(self.game_mode, self.highlight_percentage, self.lambda_continuity)
-        self.pre_trained_model_prefix = 'pre_trained_cls.model'
-
-args = Argument()
-"""
-args_dict = vars(args)
-print(args_dict)
-# embedding_size = 100
-
 # Load data.
 data_path = os.path.join(args.data_dir, args.data_name)
-beer_data = dataset.DataLoader(data_path, score_threshold=0.6, split_ratio=0.1)
+data = dataset.DataLoader(data_path, score_threshold=0.6, split_ratio=0.1)
+args.num_labels = len(data.label_vocab)
+print("Data successfully loaded:", data)
 
-# TODO: handle save/load vocab here, for saving vocab, use the following, for loading, load embedding from checkpoint
-embedding_path = os.path.join(args.data_dir, args.embedding_name)
-# embeddings = beer_data.initial_embedding(args.embedding_dim, embedding_path)
-embeddings = beer_data.initial_embedding(args.embedding_dim)
+# Load or initialize embeddings.
+if args.embedding_name:
+    embedding_path = os.path.join(args.data_dir, args.embedding_name)
+    embeddings = data.initial_embedding(args.embedding_dim, embedding_path)
+    print("Embeddings successfully loaded:", embeddings)
+else:
+    embeddings = data.initial_embedding(args.embedding_dim)
+    print("Embeddings successfully initialized:", embeddings)
 
-args.num_labels = len(beer_data.label_vocab)
-print('num_labels: ', args.num_labels)
-print(beer_data.idx2label)
-
+# Initialize model.
 classification_model = HardRationale3PlayerClassificationModelForEmnlp(embeddings, args)
-
 if args.cuda:
     classification_model.cuda()
-
-print(classification_model)
-
-if 'count_tokens' in args_dict and 'count_pieces' in args_dict:
-    classification_model.count_tokens = args.count_tokens
-    classification_model.count_pieces = args.count_pieces
+classification_model.count_tokens = args.count_tokens
+classification_model.count_pieces = args.count_pieces
+print("Model successfully initialized:", classification_model)
 
 
-train_losses = []
-train_accs = []
-dev_accs = [0.0]
-dev_anti_accs = [0.0]
-dev_cls_accs = [0.0]
-test_accs = [0.0]
-best_dev_acc = 0.0
+beer_data = data
 
-eval_accs = [0.0]
-eval_anti_accs = [0.0]
-
-args.load_pre_cls = False
-args.load_pre_gen = False
-
-# snapshot_path = os.path.join(args.working_dir, args.pre_trained_model_prefix + '.pt')
-# classification_model = torch.load(snapshot_path)
 
 classification_model.init_C_model()
 
-if args.load_pre_cls:
-    print('loading pre-trained the CLS')
-    snapshot_path_enc = os.path.join(args.working_dir, args.pre_trained_model_prefix + '.encoder.tmp.pt')
-    # torch.save(classification_model.generator.Classifier_enc, snapshot_path_enc)
-    snapshot_path_pred = os.path.join(args.working_dir, args.pre_trained_model_prefix + '.predictor.tmp.pt')
-    # torch.save(classification_model.generator.Classifier_pred, snapshot_path_pred)
-
-    copy_classifier_module(classification_model.E_model, snapshot_path_enc, snapshot_path_pred)
-    copy_classifier_module(classification_model.E_anti_model, snapshot_path_enc, snapshot_path_pred)
-    
-    copy_classifier_module(classification_model.C_model, snapshot_path_enc, snapshot_path_pred)
-
-    print(classification_model)
-if args.load_pre_gen:
-    print('loading pre-trained the GEN+CLS')
-    snapshot_path_gen = os.path.join(args.working_dir, args.model_prefix + '.train_gen.pt')
-    classification_model = torch.load(snapshot_path_gen)
-
-
-args.pre_train_cls = False
-args.fixed_E_anti = False
 classification_model.fixed_E_anti = args.fixed_E_anti
-args.with_lm = False
-args.lambda_lm = 1.0
 
 print('training with game mode:', classification_model.game_mode)
 
@@ -226,14 +136,9 @@ classification_model.init_rl_optimizers()
 classification_model.init_reward_queue()
 
 old_E_anti_weights = classification_model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
+classification_model.train()
 
 for i in tqdm(range(num_iteration)):
-    classification_model.train()
-#     supervise_optimizer.zero_grad()
-#     rl_optimizer.zero_grad()
-
-#     classification_model.lambda_sparsity = (float(i) / num_iteration) * args.lambda_sparsity
-#     classification_model.highlight_percentage = args.highlight_percentage + (1.0 - args.highlight_percentage) * (1 - (float(i) / num_iteration))
 
     # sample a batch of data
     x_mat, y_vec, x_mask = beer_data.get_train_batch(batch_size=args.batch_size, sort=True)
