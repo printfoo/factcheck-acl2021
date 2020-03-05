@@ -13,23 +13,22 @@ class DataLoader(SentenceClassification):
     Inherited from datasets.dataset_loader.SentenceClassification.
     """
 
-    def __init__(self, data_dir, truncate_num=300, freq_threshold=1, aspect=0, score_threshold=0.5, split_ratio=0.15):
+    def __init__(self, data_dir, args):
         """
         Initialize a dataset for beer reviews:
         Inputs:
             data_dir -- the directory of the dataset.
             truncate_num -- max length for tokens.
             freq_threshold -- min frequency for tokens.
-            aspect -- an integer (0-4) for an aspect.
+            aspect -- an integer (0-3) for beer aspect: apperance, aroma, palate, taste.
             score_threshold -- the threshold (0-1) for pos/neg.
             split_ratio -- split ratio for train/dev.
         """
-        self.aspect = aspect
-        self.score_threshold = score_threshold
-        self.aspect_names = ["apperance", "aroma", "palate", "taste"]
-        self.split_ratio = split_ratio
+        self.aspect = args.aspect 
+        self.score_threshold = args.score_threshold
+        self.split_ratio = args.split_ratio
         self.data_sets = {}
-        super(DataLoader, self).__init__(data_dir, truncate_num, freq_threshold)
+        super(DataLoader, self).__init__(data_dir, args.truncate_num, args.freq_threshold)
         
     def load_dataset(self):
         """

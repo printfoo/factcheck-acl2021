@@ -1,12 +1,10 @@
 # coding: utf-8
 
-# Torch.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-# Set random seeds.
 import numpy as np
 import random, os
 
@@ -16,6 +14,10 @@ from collections import deque
 from tqdm import tqdm
 
 def train_model(model, data, args):
+    torch.manual_seed(args.random_seed)  # Set random seeds.
+    np.random.seed(args.random_seed)
+    random.seed(args.random_seed)
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id # (achtung-gpu) Use the 2nd GPU.
     print('training with game mode:', model.game_mode)
 
     train_losses = []
