@@ -4,6 +4,3 @@ __pycache__
 
 # Word embeddings.
 data/glove/*
-
-# Trained models.
-models/*.bin

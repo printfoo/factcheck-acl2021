@@ -10,20 +10,22 @@ from models.nn import CnnModel, RnnModel
 
 
 class Generator(nn.Module):
-    
+    """
+    Generator module, input sequence and output binary mask.
+    Using CNN or RNN modules.
+    """
+
     def __init__(self, args, input_dim):
         """
-        args.z_dim -- rationale or not, always 2.
-        args.model_type -- "CNN" or "RNN".
-
-        if CNN:
-            args.hidden_dim -- dimension of filters.
+        Inputs:
+            args.z_dim -- rationale or not, always 2.
+            args.model_type -- "CNN" or "RNN".
+            args.hidden_dim -- dimension of hidden states.
             args.embedding_dim -- dimension of word embeddings.
+        if args.model_type == CNN:
             args.kernel_size -- kernel size of the conv1d.
             args.layer_num -- number of CNN layers.      
-        if use RNN:
-            args.hidden_dim -- dimension of filters.
-            args.embedding_dim -- dimension of word embeddings.
+        if args.model_type == RNN:
             args.layer_num -- number of RNN layers.
             args.cell_type -- type of RNN cells, "GRU" or "LSTM".
         """
@@ -46,10 +48,8 @@ class Generator(nn.Module):
             x -- input sequence of word embeddings, (batch_size, sequence_length, embedding_dim).
         Outputs:
             z -- output rationale, "binary" mask, (batch_size, sequence_length).
-        """
-        
-        # (batch_size, sequence_length, hidden_dim)
-        hiddens = self.generator_model(x, mask).transpose(1, 2).contiguous() 
-        scores = self.output_layer(hiddens) # (batch_size, sequence_length, 2)
+        """ 
+        hiddens = self.generator_model(x, mask).transpose(1, 2).contiguous()  # (batch_size, sequence_length, hidden_dim)
+        z = self.output_layer(hiddens)  # (batch_size, sequence_length, 2)
 
-        return scores
+        return z

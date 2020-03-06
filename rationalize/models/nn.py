@@ -7,7 +7,10 @@ from torch.autograd import Variable
 
 
 class CnnModel(nn.Module):
-    
+    """
+    Basic CNN module, input embedding and output hidden states.
+    """
+
     def __init__(self, args):
         """
         args.hidden_dim -- dimension of filters.
@@ -47,6 +50,9 @@ class CnnModel(nn.Module):
 
 
 class RnnModel(nn.Module):
+    """
+    Basic RNN module, input embedding and output hidden states.
+    """
 
     def __init__(self, args, input_dim):
         """
