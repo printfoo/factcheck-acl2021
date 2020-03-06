@@ -8,25 +8,22 @@ from torch.autograd import Variable
 import numpy as np
 import copy
 
-from modules.nn import RnnModel
-from modules.generator import Generator
-
-from models.models_utils import bao_regularization_loss_batch
+from models.nn import RnnModel
+from models.generator import Generator
+from models.classifier import Classifier
 
 from collections import deque
 
-
-def count_regularization_baos_for_both(z, count_tokens, count_pieces, mask=None):
+def regularization_loss_batch(z, percentage, mask=None):
     """
     Compute regularization loss, based on a given rationale sequence
     Use Yujia's formulation
-
     Inputs:
         z -- torch variable, "binary" rationale, (batch_size, sequence_length)
         percentage -- the percentage of words to keep
     Outputs:
         a loss value that contains two parts:
-        continuity_loss --  \sum_{i} | z_{i-1} - z_{i} | 
+        continuity_loss --  \sum_{i} | z_{i-1} - z_{i} |
         sparsity_loss -- |mean(z_{i}) - percent|
     """
 
@@ -37,60 +34,14 @@ def count_regularization_baos_for_both(z, count_tokens, count_pieces, mask=None)
     else:
         mask_z = z
         seq_lengths = torch.sum(z - z + 1.0, dim=1)
-    
+
     mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
-        
-    continuity_ratio = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths #(batch_size,) 
-    percentage = count_pieces * 2 / seq_lengths
-#     continuity_loss = F.threshold(continuity_ratio - percentage, 0, 0, False)
-    continuity_loss = torch.abs(continuity_ratio - percentage)
-    
-    sparsity_ratio = torch.sum(mask_z, dim=-1) / seq_lengths #(batch_size,)
-    percentage = count_tokens / seq_lengths #(batch_size,)
-#     sparsity_loss = F.threshold(sparsity_ratio - percentage, 0, 0, False)
-    sparsity_loss = torch.abs(sparsity_ratio - percentage)
+
+    continuity_loss = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths #(batch_size,)
+    sparsity_loss = torch.abs(torch.sum(mask_z, dim=-1) / seq_lengths - percentage)  #(batch_size,)
 
     return continuity_loss, sparsity_loss
 
-
-class ClassifierModule(nn.Module):
-    '''
-    classifier for both E and E_anti models
-    '''
-    def __init__(self, args):
-        super(ClassifierModule, self).__init__()
-        self.args = args
-        
-        self.num_labels = args.num_labels
-        self.hidden_dim = args.hidden_dim
-        self.mlp_hidden_dim = args.mlp_hidden_dim #50
-        
-        self.input_dim = args.embedding_dim
-        
-        self.encoder = RnnModel(self.args, self.input_dim)
-        self.predictor = nn.Linear(self.hidden_dim, self.num_labels)
-        
-        self.NEG_INF = -1.0e6
-        
-
-    def forward(self, word_embeddings, z, mask):
-        """
-        Inputs:
-            word_embeddings -- torch Variable in shape of (batch_size, length, embed_dim)
-            z -- rationale (batch_size, length)
-            mask -- torch Variable in shape of (batch_size, length)
-        Outputs:
-            predict -- (batch_size, num_label)
-        """        
-
-        masked_input = word_embeddings * z.unsqueeze(-1)
-        hiddens = self.encoder(masked_input, mask)
-        
-        max_hidden = torch.max(hiddens + (1 - mask * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
-        
-        predict = self.predictor(max_hidden)
-
-        return predict
 
 
 class Rationale3PlayerClassificationModel(nn.Module):
@@ -116,8 +67,8 @@ class Rationale3PlayerClassificationModel(nn.Module):
         
         self.input_dim = args.embedding_dim
         
-        self.E_model = ClassifierModule(args)
-        self.E_anti_model = ClassifierModule(args)
+        self.E_model = Classifier(args)
+        self.E_anti_model = Classifier(args)
         
         self.loss_func = nn.CrossEntropyLoss()
         
@@ -161,7 +112,7 @@ class HardRationale3PlayerClassificationModel(Rationale3PlayerClassificationMode
         self.z_history_rewards.append(0.)
         
     def init_C_model(self):
-        self.C_model = ClassifierModule(self.args)
+        self.C_model = Classifier(self.args)
         
     def get_C_model_pred(self, x, mask):
         word_embeddings = self.embed_layer(x) #(batch_size, length, embedding_dim)
@@ -304,7 +255,7 @@ class HardRationale3PlayerClassificationModel(Rationale3PlayerClassificationMode
             prediction = prediction.cuda()  #(batch_size,)
             prediction_anti = prediction_anti.cuda()
         
-        continuity_loss, sparsity_loss = bao_regularization_loss_batch(z, self.highlight_percentage, mask)
+        continuity_loss, sparsity_loss = regularization_loss_batch(z, self.highlight_percentage, mask)
 #         continuity_loss, sparsity_loss = bao_regularization_hinge_loss_batch(z, self.highlight_percentage, mask)
 #         continuity_loss, sparsity_loss = count_regularization_hinge_loss_batch(z, self.highlight_count, mask)
 #         continuity_loss, sparsity_loss = bao_regularization_hinge_loss_batch_with_none_loss(z, self.highlight_percentage, 

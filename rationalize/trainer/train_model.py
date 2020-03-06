@@ -18,7 +18,7 @@ def train_model(model, data, args):
     np.random.seed(args.random_seed)
     random.seed(args.random_seed)
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id # (achtung-gpu) Use the 2nd GPU.
-    print('training with game mode:', model.game_mode)
+    #print('training with game mode:', model.game_mode)
 
     train_losses = []
     train_accs = []
@@ -72,7 +72,7 @@ def train_model(model, data, args):
             z_baseline = z_baseline.cuda()
 
         losses, predict, anti_predict, z, z_rewards, continuity_loss, sparsity_loss = model.train_one_step(
-            batch_x_, batch_y_, z_baseline, batch_m_, with_lm=args.with_lm)
+            batch_x_, batch_y_, z_baseline, batch_m_)#, with_lm=args.with_lm)
 
         z_batch_reward = np.mean(z_rewards.cpu().data.numpy())
         z_history_rewards.append(z_batch_reward)

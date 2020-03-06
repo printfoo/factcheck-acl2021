@@ -79,7 +79,7 @@ parser.add_argument("--model_prefix", type=str, default="models")
 parser.add_argument("--pre_trained_model_prefix", type=str, default="pre_trained_cls.model")
 
 # Training arguments.
-parser.add_argument("--num_iteration", type=int, default=50,
+parser.add_argument("--num_iteration", type=int, default=100,
                     help="Number of iterations to train.")
 parser.add_argument("--display_iteration", type=int, default=50,
                     help="Number of iterations to display results.")
@@ -103,8 +103,8 @@ embeddings = data.initial_embedding(args.embedding_dim, embedding_path)  # Load 
 print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
 # Initialize model.
-from models.rationale_3players import HardRationale3PlayerClassificationModelForEmnlp
-model = HardRationale3PlayerClassificationModelForEmnlp(embeddings, args)
+from models.rationale_3players_sentence_classification import HardRationale3PlayerClassificationModel
+model = HardRationale3PlayerClassificationModel(embeddings, args)
 print("Model successfully initialized:", model)
 
 # Train model.
