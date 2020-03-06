@@ -13,7 +13,7 @@ parser.add_argument("--mode", type=str, default="train",
 # Environment arguments.
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--working_dir", type=str, default="models",
+parser.add_argument("--working_dir", type=str, default="checkpoints",
                     help="Model folder name.")
 parser.add_argument("--data_name", type=str, default="beer_reviews_single_aspect",
                     help="Dataset name.")
@@ -103,8 +103,8 @@ embeddings = data.initial_embedding(args.embedding_dim, embedding_path)  # Load 
 print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
 # Initialize model.
-from models.rationale_3players_sentence_classification import HardRationale3PlayerClassificationModel
-model = HardRationale3PlayerClassificationModel(embeddings, args)
+from models.rationale_3players_classification import HardRationale3PlayerClassification
+model = HardRationale3PlayerClassification(embeddings, args)
 print("Model successfully initialized:", model)
 
 # Train model.
