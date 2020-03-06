@@ -43,50 +43,34 @@ def regularization_loss_batch(z, percentage, mask=None):
     return continuity_loss, sparsity_loss
 
 
-
 class Rationale3PlayerClassification(nn.Module):
     
     def __init__(self, embeddings, args):
         super(Rationale3PlayerClassification, self).__init__()
         self.args = args
-        
+
         self.model_type = args.model_type
         self.use_cuda = args.cuda
         self.lambda_sparsity = args.lambda_sparsity
         self.lambda_continuity = args.lambda_continuity
         self.lambda_anti = args.lambda_anti
-        
+
         self.NEG_INF = -1.0e6
-                    
+
         self.vocab_size, self.embedding_dim = embeddings.shape
         self.embed_layer = self._create_embed_layer(embeddings)
-        
+
         self.num_labels = args.num_labels
         self.hidden_dim = args.hidden_dim
         self.mlp_hidden_dim = args.mlp_hidden_dim #50
-        
+
         self.input_dim = args.embedding_dim
-        
+
         self.E_model = Classifier(args)
         self.E_anti_model = Classifier(args)
-        
+
         self.loss_func = nn.CrossEntropyLoss()
-        
-        
-    def _create_embed_layer(self, embeddings):
-        embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
-        embed_layer.weight.data = torch.from_numpy(embeddings)
-        embed_layer.weight.requires_grad = self.args.fine_tuning
-        return embed_layer
-        
-    def forward(self, x, e, mask):
-        pass
 
-
-class HardRationale3PlayerClassification(Rationale3PlayerClassification):
-    
-    def __init__(self, embeddings, args):
-        super(HardRationale3PlayerClassification, self).__init__(embeddings, args)
         self.generator = Generator(args, self.input_dim)
         self.highlight_percentage = args.highlight_percentage
         self.highlight_count = args.highlight_count
@@ -96,6 +80,13 @@ class HardRationale3PlayerClassification(Rationale3PlayerClassification):
         
         if args.margin is not None:
             self.margin = args.margin
+
+
+    def _create_embed_layer(self, embeddings):
+        embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
+        embed_layer.weight.data = torch.from_numpy(embeddings)
+        embed_layer.weight.requires_grad = self.args.fine_tuning
+        return embed_layer
 
         
     def init_optimizers(self):
@@ -241,10 +232,10 @@ class HardRationale3PlayerClassification(Rationale3PlayerClassification):
 
     
     def get_advantages(self, predict, anti_predict, label, z, neg_log_probs, baseline, mask):
-        '''
+        """
         Input:
             z -- (batch_size, length)
-        '''
+        """
         
         # total loss of accuracy (not batchwise)
         _, y_pred = torch.max(predict, dim=1)
@@ -256,10 +247,6 @@ class HardRationale3PlayerClassification(Rationale3PlayerClassification):
             prediction_anti = prediction_anti.cuda()
         
         continuity_loss, sparsity_loss = regularization_loss_batch(z, self.highlight_percentage, mask)
-#         continuity_loss, sparsity_loss = bao_regularization_hinge_loss_batch(z, self.highlight_percentage, mask)
-#         continuity_loss, sparsity_loss = count_regularization_hinge_loss_batch(z, self.highlight_count, mask)
-#         continuity_loss, sparsity_loss = bao_regularization_hinge_loss_batch_with_none_loss(z, self.highlight_percentage, 
-#                                                                              self.none_relation_id, mask)
         
         continuity_loss = continuity_loss * self.lambda_continuity
         sparsity_loss = sparsity_loss * self.lambda_sparsity
