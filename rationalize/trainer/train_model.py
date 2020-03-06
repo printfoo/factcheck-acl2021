@@ -43,13 +43,6 @@ def train_model(model, data, args):
 
     if args.cuda:
         model.cuda()
-    model.count_tokens = args.count_tokens
-    model.count_pieces = args.count_pieces
-    model.init_C_model()
-    model.fixed_E_anti = args.fixed_E_anti
-    model.init_optimizers()
-    model.init_rl_optimizers()
-    model.init_reward_queue()
 
     old_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
 

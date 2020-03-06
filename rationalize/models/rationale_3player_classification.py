@@ -5,22 +5,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+
 import numpy as np
-import copy
+from collections import deque
 
 from models.nn import RnnModel
 from models.generator import Generator
 from models.classifier import Classifier
 
-from collections import deque
 
 def regularization_loss_batch(z, percentage, mask=None):
     """
-    Compute regularization loss, based on a given rationale sequence
-    Use Yujia's formulation
+    Compute regularization loss, based on a given rationale sequence.
     Inputs:
-        z -- torch variable, "binary" rationale, (batch_size, sequence_length)
-        percentage -- the percentage of words to keep
+        z -- torch variable, "binary" rationale, (batch_size, sequence_length).
+        percentage -- the percentage of words to keep.
     Outputs:
         a loss value that contains two parts:
         continuity_loss --  \sum_{i} | z_{i-1} - z_{i} |
@@ -47,77 +46,45 @@ class Rationale3PlayerClassification(nn.Module):
     
     def __init__(self, embeddings, args):
         super(Rationale3PlayerClassification, self).__init__()
+        self.NEG_INF = -1.0e6
         self.args = args
 
-        self.model_type = args.model_type
         self.use_cuda = args.cuda
         self.lambda_sparsity = args.lambda_sparsity
         self.lambda_continuity = args.lambda_continuity
         self.lambda_anti = args.lambda_anti
 
-        self.NEG_INF = -1.0e6
-
         self.vocab_size, self.embedding_dim = embeddings.shape
         self.embed_layer = self._create_embed_layer(embeddings)
-
-        self.num_labels = args.num_labels
-        self.hidden_dim = args.hidden_dim
-        self.mlp_hidden_dim = args.mlp_hidden_dim #50
 
         self.input_dim = args.embedding_dim
 
         self.E_model = Classifier(args)
         self.E_anti_model = Classifier(args)
 
-        self.loss_func = nn.CrossEntropyLoss()
-
         self.generator = Generator(args, self.input_dim)
         self.highlight_percentage = args.highlight_percentage
-        self.highlight_count = args.highlight_count
         self.exploration_rate = args.exploration_rate
         
         self.loss_func = nn.CrossEntropyLoss(reduce=False)
-        
-        if args.margin is not None:
-            self.margin = args.margin
 
+        self.opt_E = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_model.parameters()), lr=self.args.lr)
+        self.opt_E_anti = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_anti_model.parameters()), lr=self.args.lr)
+        self.opt_G_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.generator.parameters()), lr=self.args.lr * 0.1)
 
     def _create_embed_layer(self, embeddings):
         embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
         embed_layer.weight.data = torch.from_numpy(embeddings)
         embed_layer.weight.requires_grad = self.args.fine_tuning
         return embed_layer
-
-        
-    def init_optimizers(self):
-        self.opt_E = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_model.parameters()), lr=self.args.lr)
-        self.opt_E_anti = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_anti_model.parameters()), lr=self.args.lr)
-        
-    def init_rl_optimizers(self):
-        self.opt_G_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.generator.parameters()), lr=self.args.lr * 0.1)
-        
-        
-    def init_reward_queue(self):
-        queue_length = 200
-        self.z_history_rewards = deque(maxlen=queue_length)
-        self.z_history_rewards.append(0.)
-        
-    def init_C_model(self):
-        self.C_model = Classifier(self.args)
-        
-    def get_C_model_pred(self, x, mask):
-        word_embeddings = self.embed_layer(x) #(batch_size, length, embedding_dim)
-        z_ones = torch.ones_like(x).type(torch.cuda.FloatTensor)
-        cls_predict = self.C_model(word_embeddings, z_ones, mask)
-        return cls_predict
         
     def _generate_rationales(self, z_prob_):
-        '''
+        """
         Input:
             z_prob_ -- (num_rows, length, 2)
         Output:
             z -- (num_rows, length)
-        '''        
+        """
         z_prob__ = z_prob_.view(-1, 2) # (num_rows * length, 2)
         
         # sample actions
@@ -141,36 +108,6 @@ class Rationale3PlayerClassification(nn.Module):
         neg_log_probs = neg_log_probs_.view(z_prob_.size(0), z_prob_.size(1))
         
         return z, neg_log_probs
-    
-    
-    def train_gen_one_step(self, x, label, mask):
-        z_baseline = Variable(torch.FloatTensor([float(np.mean(self.z_history_rewards))]))
-        if self.args.cuda:
-            z_baseline = z_baseline.cuda()
-        
-        self.opt_G_rl.zero_grad()
-        
-        predict, anti_predict, z, neg_log_probs = self.forward(x, mask)
-        
-        e_loss_anti = torch.mean(self.loss_func(anti_predict, label))
-        
-        e_loss = torch.mean(self.loss_func(predict, label))
-        
-        rl_loss, rewards, continuity_loss, sparsity_loss = self.get_loss(predict, anti_predict, z, 
-                                                                         neg_log_probs, z_baseline, 
-                                                                         mask, label)
-        
-        losses = {'g_rl_loss':rl_loss.cpu().data}
-
-        rl_loss.backward()
-        self.opt_G_rl.step()
-        self.opt_G_rl.zero_grad()
-    
-        z_batch_reward = np.mean(rewards.cpu().data.numpy())
-        self.z_history_rewards.append(z_batch_reward)
-        
-        return losses, predict, anti_predict, z, rewards, continuity_loss, sparsity_loss
-
     
     def train_one_step(self, x, label, baseline, mask):
         

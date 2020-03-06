@@ -103,7 +103,7 @@ embeddings = data.initial_embedding(args.embedding_dim, embedding_path)  # Load 
 print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
 # Initialize model.
-from models.rationale_3players_classification import Rationale3PlayerClassification
+from models.rationale_3player_classification import Rationale3PlayerClassification
 model = Rationale3PlayerClassification(embeddings, args)
 print("Model successfully initialized:", model)
 
