@@ -1,8 +1,8 @@
 # NLP rationalization.
 
-Train a model:
+Run:
 ```
-python rationalize/train.py
+python rationalize/run.py [params]
 ```
 
 Based on:  

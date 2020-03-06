@@ -6,6 +6,10 @@ import sys, os
 import argparse
 parser = argparse.ArgumentParser()
 
+# Mode arguments.
+parser.add_argument("--mode", type=str, default="train",
+                    help="Run mode, train or eval.")
+
 # Environment arguments.
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
