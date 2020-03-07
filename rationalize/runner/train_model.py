@@ -44,7 +44,7 @@ def train_model(model, data, args):
     if args.cuda:
         model.cuda()
 
-    old_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
+    #old_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
 
     for i in tqdm(range(num_iteration)):
         model.train()
@@ -78,16 +78,16 @@ def train_model(model, data, args):
 
         train_losses.append(losses['e_loss'])
 
-        if args.fixed_E_anti == True:
-            new_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
-            assert (old_E_anti_weights == new_E_anti_weights).all(), 'E anti model changed'
+        # if args.fixed_E_anti == True:
+        #    new_E_anti_weights = model.E_anti_model.predictor._parameters['weight'][0].cpu().data.numpy()
+        #    assert (old_E_anti_weights == new_E_anti_weights).all(), 'E anti model changed'
 
         if (i+1) % display_iteration == 0:
             print('sparsity lambda: %.4f'%(model.lambda_sparsity))
             print('highlight percentage: %.4f'%(model.highlight_percentage))
             print('supervised_loss %.4f, sparsity_loss %.4f, continuity_loss %.4f'%(losses['e_loss'], torch.mean(sparsity_loss).cpu().data, torch.mean(continuity_loss).cpu().data))
-            if args.with_lm:
-                print('lm prob: %.4f'%losses['lm_prob'])
+            # if args.with_lm:
+            #    print('lm prob: %.4f'%losses['lm_prob'])
             y_ = y_vec[2]
             pred_ = y_pred.data[2]
             x_ = x_mat[2,:]
@@ -107,7 +107,7 @@ def train_model(model, data, args):
             new_best_dev_acc = evaluate_rationale_model_glue(model, data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, print_train_flag=False)
             if new_best_dev_acc > best_dev_acc:
                 best_dev_acc = new_best_dev_acc
-                snapshot_path = os.path.join(args.working_dir, args.model_prefix + '.state_dict.bin')
+                snapshot_path = os.path.join(args.working_dir, "trained.ckpt")
                 print('new best dev:', new_best_dev_acc, 'model saved at', snapshot_path)
                 torch.save(model.state_dict(), snapshot_path)
 

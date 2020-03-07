@@ -39,44 +39,36 @@ parser.add_argument("--truncate_num", type=int, default=300,
                     help="Maximum number of tokens to truncate.")
 
 # Model arguments.,
-parser.add_argument("--model_type", type=str, default="RNN")
-parser.add_argument("--cell_type", type=str, default="GRU")
-parser.add_argument("--hidden_dim", type=int, default=400)
-parser.add_argument("--embedding_dim", type=int, default=100)
-parser.add_argument("--kernel_size", type=int, default=5)
-parser.add_argument("--layer_num", type=int, default=1)
-parser.add_argument("--fine_tuning", type=bool, default=False)
-parser.add_argument("--z_dim", type=int, default=2)
-parser.add_argument("--gumbel_temprature", type=float, default=0.1)
-parser.add_argument("--batch_size", type=int, default=32)
-parser.add_argument("--mlp_hidden_dim", type=int, default=50)
-parser.add_argument("--dropout_rate", type=float, default=0.4)
-parser.add_argument("--use_relative_pos", type=bool, default=True)
-parser.add_argument("--max_pos_num", type=int, default=20)
-parser.add_argument("--pos_embedding_dim", type=int, default=-1)
-parser.add_argument("--fixed_classifier", type=bool, default=True)
-parser.add_argument("--fixed_E_anti", type=bool, default=False)
-parser.add_argument("--lambda_sparsity", type=float, default=1.0)
-parser.add_argument("--lambda_continuity", type=float, default=1.0)
-parser.add_argument("--lambda_anti", type=float, default=1.0)
-parser.add_argument("--lambda_pos_reward", type=float, default=0.1)
-parser.add_argument("--exploration_rate", type=float, default=0.05)
-parser.add_argument("--highlight_percentage", type=float, default=0.3)
-parser.add_argument("--highlight_count", type=int, default=8)
-parser.add_argument("--count_tokens", type=int, default=8)
-parser.add_argument("--count_pieces", type=int, default=4)
-parser.add_argument("--lambda_acc_gap", type=float, default=1.2)
-parser.add_argument("--label_embedding_dim", type=int, default=400)
-parser.add_argument("--game_mode", type=str, default="3player")
-parser.add_argument("--margin", type=float, default=0.2)
-parser.add_argument("--lm_setting", type=str, default="multiple")
-parser.add_argument("--lambda_lm", type=float, default=1.0)
-parser.add_argument("--ngram", type=int, default=4)
-parser.add_argument("--with_lm", type=bool, default=False)
-parser.add_argument("--batch_size_ngram_eval", type=int, default=5)
-parser.add_argument("--lr", type=float, default=0.001)
-parser.add_argument("--model_prefix", type=str, default="models")
-parser.add_argument("--pre_trained_model_prefix", type=str, default="pre_trained_cls.model")
+parser.add_argument("--model_type", type=str, default="RNN",
+                    help="Model type, RNN or CNN.")
+parser.add_argument("--hidden_dim", type=int, default=400,
+                    help="Dimension of hidden states.")
+parser.add_argument("--z_dim", type=int, default=2,
+                    help="Dimension of rationale mask, always 2 for now.")
+parser.add_argument("--embedding_dim", type=int, default=100,
+                    help="Dimension of word embeddings.")
+parser.add_argument("--fine_tuning", type=bool, default=False,
+                    help="Whether to fine tune embeddings or not.")
+parser.add_argument("--layer_num", type=int, default=1,
+                    help="If RNN, number of RNN layers.")
+parser.add_argument("--cell_type", type=str, default="GRU",
+                    help="If RNN, cell type, GRU or LSTM.")
+parser.add_argument("--kernel_size", type=int, default=5,
+                    help="If CNN, kernel size of the conv1d.")
+parser.add_argument("--batch_size", type=int, default=32,
+                    help="Batch size, 8, 16, 32, etc.")
+parser.add_argument("--lr", type=float, default=0.001,
+                    help="Learning rate.")
+parser.add_argument("--lambda_sparsity", type=float, default=1.0,
+                    help="Control the importance of sparsity.")
+parser.add_argument("--lambda_continuity", type=float, default=1.0,
+                    help="Control the importance of continuity.")
+parser.add_argument("--lambda_anti", type=float, default=1.0,
+                    help="Control the importance of anti-predictor.")
+parser.add_argument("--exploration_rate", type=float, default=0.05,
+                    help="Exploration rate.")
+parser.add_argument("--highlight_percentage", type=float, default=0.3,
+                    help="Highlight percentage.")
 
 # Training arguments.
 parser.add_argument("--num_iteration", type=int, default=100,
