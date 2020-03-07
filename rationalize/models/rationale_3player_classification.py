@@ -179,25 +179,24 @@ class Rationale3PlayerClassification(nn.Module):
         
         e_loss_anti = torch.mean(self.loss_func(anti_predict, label))        
         e_loss = torch.mean(self.loss_func(predict, label))
-        rl_loss, rewards, continuity_loss, sparsity_loss = self._get_loss(predict, anti_predict, z, 
-                                                                          neg_log_probs, baseline, 
-                                                                          mask, label)
+        loss_tuple = self._get_loss(predict, anti_predict, z, neg_log_probs, baseline, mask, label)
+        rl_loss, rewards, continuity_loss, sparsity_loss = loss_tuple
         
-        losses = {"e_loss": e_loss.cpu().data,
-                  "e_loss_anti": e_loss_anti.cpu().data,
-                  "g_loss": rl_loss.cpu().data}
-        
+        # Backprop loss to predictor E.
         e_loss_anti.backward()
         self.opt_E_anti.step()
         self.opt_E_anti.zero_grad()
         
+        # Backprop loss to predictor anti_E.
         e_loss.backward()
         self.opt_E.step()
         self.opt_E.zero_grad()
 
+        # Backprop loss to generator G.
         rl_loss.backward()
         self.opt_G_rl.step()
         self.opt_G_rl.zero_grad()
         
+        losses = {"e_loss": e_loss.data, "e_loss_anti": e_loss_anti.data, "g_loss": rl_loss.data}
         return losses, predict, anti_predict, z, rewards, continuity_loss, sparsity_loss
     

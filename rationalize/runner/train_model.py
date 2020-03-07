@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import numpy as np
 import random, os
 
-from trainer.train_utils import evaluate_rationale_model_glue
+from runner.train_utils import evaluate_rationale_model_glue
 
 from collections import deque
 from tqdm import tqdm

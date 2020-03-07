@@ -108,6 +108,6 @@ model = Rationale3PlayerClassification(embeddings, args)
 print("Model successfully initialized:", model)
 
 # Train model.
-from trainer.train_model import train_model
+from runner.train_model import train_model
 train_model(model, data, args)
 print("Model successfully trained.")
