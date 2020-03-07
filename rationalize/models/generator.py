@@ -30,15 +30,12 @@ class Generator(nn.Module):
             args.cell_type -- type of RNN cells, "GRU" or "LSTM".
         """
         super(Generator, self).__init__()
-        
         self.args = args
-        self.z_dim = args.z_dim
-        
         if args.model_type == "CNN":
             self.generator_model = CnnModel(args, input_dim)
         elif args.model_type == "RNN":
             self.generator_model = RnnModel(args, input_dim)
-        self.output_layer = nn.Linear(args.hidden_dim, self.z_dim)
+        self.output_layer = nn.Linear(args.hidden_dim, args.z_dim)
 
     def forward(self, x, mask=None):
         """
@@ -51,5 +48,4 @@ class Generator(nn.Module):
         """ 
         hiddens = self.generator_model(x, mask).transpose(1, 2).contiguous()  # (batch_size, sequence_length, hidden_dim)
         z = self.output_layer(hiddens)  # (batch_size, sequence_length, 2)
-
         return z

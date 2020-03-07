@@ -33,20 +33,18 @@ class Rationale3PlayerClassification(nn.Module):
         self.vocab_size, self.embedding_dim = embeddings.shape
         self.embed_layer = self._create_embed_layer(embeddings)
 
-        self.input_dim = args.embedding_dim
-
         self.E_model = Classifier(args)
         self.E_anti_model = Classifier(args)
-
-        self.generator = Generator(args, self.input_dim)
-        self.highlight_percentage = args.highlight_percentage
-        self.exploration_rate = args.exploration_rate
-        
-        self.loss_func = nn.CrossEntropyLoss(reduce=False)
+        self.generator = Generator(args, self.embedding_dim)
 
         self.opt_E = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_model.parameters()), lr=self.args.lr)
         self.opt_E_anti = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_anti_model.parameters()), lr=self.args.lr)
         self.opt_G_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.generator.parameters()), lr=self.args.lr * 0.1)
+
+        self.highlight_percentage = args.highlight_percentage
+        self.exploration_rate = args.exploration_rate
+        
+        self.loss_func = nn.CrossEntropyLoss(reduce=False)
 
 
     def _create_embed_layer(self, embeddings):
@@ -63,27 +61,23 @@ class Rationale3PlayerClassification(nn.Module):
         Output:
             z -- (num_rows, length).
         """
-        z_prob__ = z_prob_.view(-1, 2) # (num_rows * length, 2)
-        
-        # sample actions
-        sampler = torch.distributions.Categorical(z_prob__)
+        z_prob__ = z_prob_.view(-1, 2)  # (num_rows*length, 2).
+
+        sampler = torch.distributions.Categorical(z_prob__)  # Sample actions.
         if self.training:
-            z_ = sampler.sample() # (num_rows * p_length,)
+            z_ = sampler.sample()  # (num_rows*p_length,).
         else:
             z_ = torch.max(z_prob__, dim=-1)[1]
-        
-        #(num_rows, length)
-        z = z_.view(z_prob_.size(0), z_prob_.size(1))
+
+        z = z_.view(z_prob_.size(0), z_prob_.size(1))  # (num_rows, length).
         
         if self.use_cuda == True:
             z = z.type(torch.cuda.FloatTensor)
         else:
             z = z.type(torch.FloatTensor)
-            
-        # (num_rows * length,)
-        neg_log_probs_ = -sampler.log_prob(z_)
-        # (num_rows, length)
-        neg_log_probs = neg_log_probs_.view(z_prob_.size(0), z_prob_.size(1))
+
+        neg_log_probs_ = -sampler.log_prob(z_)  # (num_rows*length,).
+        neg_log_probs = neg_log_probs_.view(z_prob_.size(0), z_prob_.size(1))  # (num_rows, length).
         
         return z, neg_log_probs
 
@@ -97,21 +91,17 @@ class Rationale3PlayerClassification(nn.Module):
             predict -- (batch_size, num_label).
             z -- rationale (batch_size, length).
         """
-        word_embeddings = self.embed_layer(x) #(batch_size, length, embedding_dim)
+        word_embeddings = self.embed_layer(x)  # (batch_size, length, embedding_dim).
 
-        neg_inf = -1.0e6
-
-        z_scores_ = self.generator(word_embeddings, mask) #(batch_size, length, 2)
-        z_scores_[:, :, 1] = z_scores_[:, :, 1] + (1 - mask) * neg_inf
+        z_scores_ = self.generator(word_embeddings, mask)  # (batch_size, length, 2).
+        z_scores_[:, :, 1] = z_scores_[:, :, 1] + (1 - mask) * self.NEG_INF
 
         z_probs_ = F.softmax(z_scores_, dim=-1)
-
         z_probs_ = (mask.unsqueeze(-1) * ( (1 - self.exploration_rate) * z_probs_ + self.exploration_rate / z_probs_.size(-1) ) ) + ((1 - mask.unsqueeze(-1)) * z_probs_)
 
         z, neg_log_probs = self._generate_rationales(z_probs_)
 
         predict = self.E_model(word_embeddings, z, mask)
-
         anti_predict = self.E_anti_model(word_embeddings, 1 - z, mask)
 
         return predict, anti_predict, z, neg_log_probs
@@ -128,9 +118,8 @@ class Rationale3PlayerClassification(nn.Module):
             sparsity_loss -- |mean(z_{i}) - percent|.
         """
 
-        # (batch_size,).
         if mask is not None:
-            mask_z = z * mask
+            mask_z = z * mask  # (batch_size,).
             seq_lengths = torch.sum(mask, dim=1)
         else:
             mask_z = z
@@ -138,8 +127,8 @@ class Rationale3PlayerClassification(nn.Module):
 
         mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
 
-        continuity_loss = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths #(batch_size,).
-        sparsity_loss = torch.abs(torch.sum(mask_z, dim=-1) / seq_lengths - percentage)  #(batch_size,).
+        continuity_loss = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,).
+        sparsity_loss = torch.abs(torch.sum(mask_z, dim=-1) / seq_lengths - percentage)  # (batch_size,).
 
         return continuity_loss, sparsity_loss
 
@@ -164,8 +153,7 @@ class Rationale3PlayerClassification(nn.Module):
         continuity_loss = continuity_loss * self.lambda_continuity
         sparsity_loss = sparsity_loss * self.lambda_sparsity
 
-        # batch RL reward.
-        rewards = prediction - prediction_anti - sparsity_loss - continuity_loss
+        rewards = prediction - prediction_anti - sparsity_loss - continuity_loss  # batch RL reward.
         
         advantages = rewards - baseline  # (batch_size,).
         advantages = Variable(advantages.data, requires_grad=False)
@@ -178,9 +166,8 @@ class Rationale3PlayerClassification(nn.Module):
     def _get_loss(self, predict, anti_predict, z, neg_log_probs, baseline, mask, label):
         reward_tuple = self._get_advantages(predict, anti_predict, label, z, neg_log_probs, baseline, mask)
         advantages, rewards, continuity_loss, sparsity_loss = reward_tuple
-        
-        # (batch_size, q_length)
-        advantages_expand_ = advantages.unsqueeze(-1).expand_as(neg_log_probs)
+
+        advantages_expand_ = advantages.unsqueeze(-1).expand_as(neg_log_probs)  # (batch_size, q_length).
         rl_loss = torch.sum(neg_log_probs * advantages_expand_ * mask)
         
         return rl_loss, rewards, continuity_loss, sparsity_loss
@@ -190,15 +177,14 @@ class Rationale3PlayerClassification(nn.Module):
         
         predict, anti_predict, z, neg_log_probs = self.forward(x, mask)
         
-        e_loss_anti = torch.mean(self.loss_func(anti_predict, label))
-        
+        e_loss_anti = torch.mean(self.loss_func(anti_predict, label))        
         e_loss = torch.mean(self.loss_func(predict, label))
-        
         rl_loss, rewards, continuity_loss, sparsity_loss = self._get_loss(predict, anti_predict, z, 
                                                                           neg_log_probs, baseline, 
                                                                           mask, label)
         
-        losses = {"e_loss": e_loss.cpu().data, "e_loss_anti": e_loss_anti.cpu().data,
+        losses = {"e_loss": e_loss.cpu().data,
+                  "e_loss_anti": e_loss_anti.cpu().data,
                   "g_loss": rl_loss.cpu().data}
         
         e_loss_anti.backward()

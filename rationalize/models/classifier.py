@@ -25,12 +25,8 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.NEG_INF = -1.0e6
         self.args = args
-        self.num_labels = args.num_labels
-        self.hidden_dim = args.hidden_dim
-        self.input_dim = args.embedding_dim
-
-        self.encoder = RnnModel(self.args, self.input_dim)
-        self.predictor = nn.Linear(self.hidden_dim, self.num_labels)
+        self.encoder = RnnModel(self.args, args.embedding_dim)
+        self.predictor = nn.Linear(args.hidden_dim, args.num_labels)
 
     def forward(self, word_embeddings, z, mask):
         """
