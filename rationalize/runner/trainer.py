@@ -4,7 +4,7 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
-import random, os
+import random, os, json
 from collections import deque
 from tqdm import tqdm
 
@@ -28,9 +28,12 @@ def train(model, data, args):
     z_history_rewards = deque(maxlen=200)
     z_history_rewards.append(0.)
 
-    # Initialize record for accuracy and losses.
-    train_losses = []
-    train_accs = []
+    # Initialize records.
+    accs = {"name": "accuracy", "train": [], "dev": [], "test": []}
+    anti_accs = {"name": "anti-accuracy", "train": [], "dev": [], "test": []}
+    sparsities = {"name": "sparsity", "train": [], "dev": [], "test": []}
+    continuities = {"name": "continuity", "train": [], "dev": [], "test": []}
+
     best_dev_acc = 0.0
     best_test_acc = 0.0
 
@@ -60,13 +63,15 @@ def train(model, data, args):
         z_batch_reward = torch.mean(z_rewards).item()
         z_history_rewards.append(z_batch_reward)
 
-        # Evaluate classification accuarcy.
+        # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)
         _, anti_y_pred = torch.max(anti_predict, dim=1)
+        accs["train"].append(get_batch_accuracy(y_pred, batch_y_))
+        anti_accs["train"].append(get_batch_accuracy(anti_y_pred, batch_y_))
 
-        acc = np.float((y_pred == batch_y_).sum().data) / args.batch_size
-        train_accs.append(acc)
-        train_losses.append(losses["e_loss"])
+        # Evaluate sparsity and continuity measures.
+        sparsities["train"].append(get_batch_sparsity(z, batch_m_))
+        continuities["train"].append(get_batch_continuity(z, batch_m_))
 
         # Display every args.display_iteration.
         if (i+1) % args.display_iteration == 0:
@@ -75,26 +80,38 @@ def train(model, data, args):
             y_ = y_vec[2]
             pred_ = y_pred.data[2]
             x_ = x_mat[2,:]
-            if len(z.shape) == 3:
-                z_ = z.data[2,pred_,:]
-            else:
-                z_ = z.data[2,:]
+            z_ = z.data[2,:]
             z_b = torch.zeros_like(z)
             z_b_ = z_b.data[2,:]
             print("gold label:", data.idx2label[y_], "pred label:", data.idx2label[pred_.item()])
             data.display_example(x_, z_)
 
-        if (i+1) % args.test_iteration == 0:
+        if (i+1) % args.eval_iteration == 0:
 
             # Eval dev set.
-            new_dev_acc, new_dev_anti_acc, _, _ = evaluate(model, data, args, "dev")
-            if new_dev_acc > best_dev_acc:  # If historically best on dev set.
-                best_dev_acc = new_dev_acc
+            dev_acc, dev_anti_acc, dev_sparsity, dev_continuity = evaluate(model, data, args, "dev")
+            accs["dev"].append(dev_acc)
+            anti_accs["dev"].append(dev_anti_acc)
+            sparsities["dev"].append(dev_sparsity)
+            continuities["dev"].append(dev_continuity)
+            if dev_acc > best_dev_acc:  # If historically best on dev set.
+                best_dev_acc = dev_acc
                 snapshot_path = os.path.join(args.working_dir, "trained.ckpt")
-                print('new best dev:', new_dev_acc, 'model saved at', snapshot_path)
+                print("new best dev:", dev_acc, "model saved at", snapshot_path)
                 torch.save(model.state_dict(), snapshot_path)
 
             # Eval test set.
-            new_test_acc, new_test_anti_acc, _, _ = evaluate(model, data, args, "test")
-            if new_test_acc > best_test_acc:  # If historically best on test set.
-                best_test_acc = new_test_acc
+            test_acc, test_anti_acc, test_sparsity, test_continuity = evaluate(model, data, args, "test")
+            accs["test"].append(test_acc)
+            anti_accs["test"].append(test_anti_acc)
+            sparsities["test"].append(test_sparsity)
+            continuities["test"].append(test_continuity)
+            if test_acc > best_test_acc:  # If historically best on test set.
+                best_test_acc = test_acc
+
+    for metric in [accs, anti_accs, sparsities, continuities]:
+        record_path = os.path.join(args.working_dir, metric["name"] + ".json")
+        with open(record_path, "w") as f:
+            f.write(json.dumps(metric))
+        print("Training record saved for:", metric["name"])
+    return accs, anti_accs, sparsities, continuities

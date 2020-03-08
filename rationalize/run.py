@@ -75,8 +75,8 @@ parser.add_argument("--num_iteration", type=int, default=100,
                     help="Number of iterations to train.")
 parser.add_argument("--display_iteration", type=int, default=50,
                     help="Number of iterations to display results.")
-parser.add_argument("--test_iteration", type=int, default=50,
-                    help="Number of iterations to test.")
+parser.add_argument("--eval_iteration", type=int, default=50,
+                    help="Number of iterations to evaluate.")
 
 # Parse arguments.
 args, extras = parser.parse_known_args()
