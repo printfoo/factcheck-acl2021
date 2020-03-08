@@ -39,8 +39,9 @@ class Rationale3PlayerClassification(nn.Module):
         self.opt_E_anti = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_anti_model.parameters()), lr=self.args.lr)
         self.opt_G_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.generator.parameters()), lr=self.args.lr * 0.1)
 
-        self.highlight_percentage = args.highlight_percentage
         self.exploration_rate = args.exploration_rate
+        self.count_pieces = args.count_pieces
+        self.count_tokens = args.count_tokens
         
         self.loss_func = nn.CrossEntropyLoss(reduce=False)
 
@@ -105,12 +106,13 @@ class Rationale3PlayerClassification(nn.Module):
         return predict, anti_predict, z, neg_log_probs
     
 
-    def _regularization_loss_batch(self, z, percentage, mask=None):
+    def _regularization_loss_batch(self, z, count_tokens, count_pieces, mask=None):
         """
         Compute regularization loss, based on a given rationale sequence.
         Inputs:
             z -- torch variable, "binary" rationale, (batch_size, sequence_length).
-            percentage -- the percentage of words to keep.
+            count_tokens -- average length of rationales.
+            count_pieces -- average number of rationales.
         Outputs:
             continuity_loss --  \sum_{i} | z_{i-1} - z_{i} |.
             sparsity_loss -- |mean(z_{i}) - percent|.
@@ -125,8 +127,13 @@ class Rationale3PlayerClassification(nn.Module):
 
         mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
 
-        continuity_loss = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,).
-        sparsity_loss = torch.abs(torch.sum(mask_z, dim=-1) / seq_lengths - percentage)  # (batch_size,).
+        continuity_ratio = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,) 
+        percentage = count_pieces * 2 / seq_lengths # two transitions from rationale to not.
+        continuity_loss = torch.abs(continuity_ratio - percentage)
+    
+        sparsity_ratio = torch.sum(mask_z, dim=-1) / seq_lengths  # (batch_size,).
+        percentage = count_tokens / seq_lengths
+        sparsity_loss = torch.abs(sparsity_ratio - percentage)
 
         return continuity_loss, sparsity_loss
 
@@ -146,13 +153,13 @@ class Rationale3PlayerClassification(nn.Module):
             prediction = prediction.cuda()  # (batch_size,).
             prediction_anti = prediction_anti.cuda()
         
-        continuity_loss, sparsity_loss = self._regularization_loss_batch(z, self.highlight_percentage, mask)
+        continuity_loss, sparsity_loss = self._regularization_loss_batch(z, self.count_tokens, self.count_pieces, mask)
         
         continuity_loss = continuity_loss * self.lambda_continuity
         sparsity_loss = sparsity_loss * self.lambda_sparsity
 
         rewards = prediction - prediction_anti - sparsity_loss - continuity_loss  # batch RL reward.
-        
+
         advantages = rewards - baseline  # (batch_size,).
         advantages = Variable(advantages.data, requires_grad=False)
         if self.use_cuda:

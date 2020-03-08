@@ -17,7 +17,7 @@ parser.add_argument("--working_dir", type=str, default="checkpoints",
                     help="Model folder name.")
 parser.add_argument("--data_name", type=str, default="beer_reviews_single_aspect",
                     help="Dataset name.")
-parser.add_argument("--embedding_name", type=str, default=os.path.join("glove", "glove.6B.100d.txt"),
+parser.add_argument("--embedding_name", type=str, default=os.path.join("glove", "glove.6B.100d.txt?"),
                     help="Embedding name.")
 parser.add_argument("--random_seed", type=int, default=0,
                     help="Random seed.")
@@ -67,15 +67,17 @@ parser.add_argument("--lambda_anti", type=float, default=1.0,
                     help="Control the importance of anti-predictor.")
 parser.add_argument("--exploration_rate", type=float, default=0.05,
                     help="Exploration rate.")
-parser.add_argument("--highlight_percentage", type=float, default=0.3,
-                    help="Highlight percentage.")
+parser.add_argument("--count_tokens", type=int, default=8,
+                    help="Average length of rationales.")
+parser.add_argument("--count_pieces", type=int, default=4,
+                    help="Average number of rationales.")
 
 # Training arguments.
-parser.add_argument("--num_iteration", type=int, default=10000,
+parser.add_argument("--num_iteration", type=int, default=1000,
                     help="Number of iterations to train.")
-parser.add_argument("--display_iteration", type=int, default=1000,
+parser.add_argument("--display_iteration", type=int, default=100,
                     help="Number of iterations to display results.")
-parser.add_argument("--eval_iteration", type=int, default=1000,
+parser.add_argument("--eval_iteration", type=int, default=100,
                     help="Number of iterations to evaluate.")
 
 # Parse arguments.
@@ -85,6 +87,14 @@ args.command = " ".join(["python"] + sys.argv)
 print("Command with argumanets:", args.command)
 
 if args.mode == "train":
+
+    # Set random seeds.
+    import torch
+    import numpy as np
+    import random
+    torch.manual_seed(args.random_seed)
+    np.random.seed(args.random_seed)
+    random.seed(args.random_seed)
 
     # Load data and embeddings.
     import importlib

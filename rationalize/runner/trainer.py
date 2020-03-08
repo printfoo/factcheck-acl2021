@@ -13,12 +13,7 @@ from runner.metrics import get_batch_accuracy, get_batch_sparsity, get_batch_con
 
 
 def train(model, data, args):
-
-    # Set random seeds.
-    torch.manual_seed(args.random_seed)
-    np.random.seed(args.random_seed)
-    random.seed(args.random_seed)
-
+    
     # Set GPU.
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     if args.cuda:
@@ -78,7 +73,7 @@ def train(model, data, args):
         tmp_continuity += get_batch_continuity(z, batch_m_)
 
         # Display every args.display_iteration.
-        if i > 0 and i % args.display_iteration == 0:
+        if i % args.display_iteration == 0:
             print("supervised_loss %.4f, sparsity_loss %.4f, continuity_loss %.4f" %
                   (losses["e_loss"], torch.mean(sparsity_loss).data, torch.mean(continuity_loss).data))
             y_ = y_vec[2]
@@ -90,7 +85,7 @@ def train(model, data, args):
             print("gold label:", data.idx2label[y_], "pred label:", data.idx2label[pred_.item()])
             data.display_example(x_, z_)
 
-        if i > 0 and i % args.eval_iteration == 0:
+        if i % args.eval_iteration == 0:
 
             # Eval dev set.
             dev_acc, dev_anti_acc, dev_sparsity, dev_continuity = evaluate(model, data, args, "dev")
