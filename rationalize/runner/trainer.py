@@ -29,19 +29,11 @@ def train(model, data, args):
     z_history_rewards = deque(maxlen=200)
     z_history_rewards.append(0.)
 
-    # Initialize losses.
+    # Initialize record for accuracy and losses.
     train_losses = []
     train_accs = []
-    dev_accs = [0.0]
-    dev_anti_accs = [0.0]
-    dev_cls_accs = [0.0]
-    test_accs = [0.0]
-    test_anti_accs = [0.0]
-    test_cls_accs = [0.0]
     best_dev_acc = 0.0
     best_test_acc = 0.0
-    eval_accs = [0.0]
-    eval_anti_accs = [0.0]
 
     # Start training iterations.
     for i in tqdm(range(args.num_iteration)):
@@ -69,7 +61,7 @@ def train(model, data, args):
         z_batch_reward = torch.mean(z_rewards).item()
         z_history_rewards.append(z_batch_reward)
 
-        # Calculate classification accuarcy.
+        # Evaluate classification accuarcy.
         _, y_pred = torch.max(predict, dim=1)
         acc = np.float((y_pred == batch_y_).sum().data) / args.batch_size
         train_accs.append(acc)
@@ -94,14 +86,14 @@ def train(model, data, args):
         if (i+1) % args.test_iteration == 0:
 
             # Eval dev set.
-            new_best_dev_acc = evaluate(model, data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, "dev")
-            if new_best_dev_acc > best_dev_acc:  # If historically best on dev set.
-                best_dev_acc = new_best_dev_acc
+            new_dev_acc, new_dev_anti_acc, _, _ = evaluate(model, data, args, "dev")
+            if new_dev_acc > best_dev_acc:  # If historically best on dev set.
+                best_dev_acc = new_dev_acc
                 snapshot_path = os.path.join(args.working_dir, "trained.ckpt")
-                print('new best dev:', new_best_dev_acc, 'model saved at', snapshot_path)
+                print('new best dev:', new_dev_acc, 'model saved at', snapshot_path)
                 torch.save(model.state_dict(), snapshot_path)
 
             # Eval test set.
-            new_best_test_acc = evaluate(model, data, args, test_accs, test_anti_accs, test_cls_accs, best_test_acc, "test")
-            if new_best_test_acc > best_test_acc:  # If historically best on test set.
-                best_test_acc = new_best_test_acc
+            new_test_acc, new_test_anti_acc, _, _ = evaluate(model, data, args, "test")
+            if new_test_acc > best_test_acc:  # If historically best on test set.
+                best_test_acc = new_test_acc
