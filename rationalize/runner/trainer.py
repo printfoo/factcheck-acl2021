@@ -10,7 +10,7 @@ import random, os
 from collections import deque
 from tqdm import tqdm
 
-from runner.evaluator import eval_glue
+from runner.evaluator import evaluate
 
 
 def train(model, data, args):
@@ -94,7 +94,7 @@ def train(model, data, args):
         if (i+1) % args.test_iteration == 0:
 
             # Eval dev set.
-            new_best_dev_acc = eval_glue(model, data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, print_train_flag=False)
+            new_best_dev_acc = evaluate(model, data, args, dev_accs, dev_anti_accs, dev_cls_accs, best_dev_acc, "dev")
             if new_best_dev_acc > best_dev_acc:  # If historically best on dev set.
                 best_dev_acc = new_best_dev_acc
                 snapshot_path = os.path.join(args.working_dir, "trained.ckpt")
@@ -102,6 +102,6 @@ def train(model, data, args):
                 torch.save(model.state_dict(), snapshot_path)
 
             # Eval test set.
-            new_best_test_acc = eval_glue(model, data, args, test_accs, test_anti_accs, test_cls_accs, best_test_acc, print_train_flag=False, eval_test=True)
+            new_best_test_acc = evaluate(model, data, args, test_accs, test_anti_accs, test_cls_accs, best_test_acc, "test")
             if new_best_test_acc > best_test_acc:  # If historically best on test set.
                 best_test_acc = new_best_test_acc
