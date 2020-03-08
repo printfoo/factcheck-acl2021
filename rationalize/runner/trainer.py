@@ -42,7 +42,7 @@ def train(model, data, args):
     tmp_continuity = 0.0
 
     # Start training iterations.
-    for i in tqdm(range(args.num_iteration)):
+    for i in tqdm(range(args.num_iteration + 1)):
 
         model.train()  # Set model to train mode.
         x_mat, y_vec, x_mask = data.get_train_batch(batch_size=args.batch_size, sort=True)  # Sample a batch.

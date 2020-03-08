@@ -71,11 +71,11 @@ parser.add_argument("--highlight_percentage", type=float, default=0.3,
                     help="Highlight percentage.")
 
 # Training arguments.
-parser.add_argument("--num_iteration", type=int, default=100,
+parser.add_argument("--num_iteration", type=int, default=2000,
                     help="Number of iterations to train.")
-parser.add_argument("--display_iteration", type=int, default=50,
+parser.add_argument("--display_iteration", type=int, default=200,
                     help="Number of iterations to display results.")
-parser.add_argument("--eval_iteration", type=int, default=50,
+parser.add_argument("--eval_iteration", type=int, default=200,
                     help="Number of iterations to evaluate.")
 
 # Parse arguments.
@@ -84,22 +84,34 @@ args.extras = extras
 args.command = " ".join(["python"] + sys.argv)
 print("Command with argumanets:", args.command)
 
-# Load data and embeddings.
-import importlib
-dataset = importlib.import_module("datasets." + args.data_name)
-data_path = os.path.join(args.data_dir, args.data_name)
-data = dataset.DataLoader(data_path, args)  # Load data.
-args.num_labels = len(data.label_vocab)  # Number of labels.
-embedding_path = os.path.join(args.data_dir, args.embedding_name)
-embeddings = data.initial_embedding(args.embedding_dim, embedding_path)  # Load embeddings.
-print("Data and embeddings successfully loaded:", data, embeddings.shape)
+if args.mode == "train":
 
-# Initialize model.
-from models.rationale_3player_classification import Rationale3PlayerClassification
-model = Rationale3PlayerClassification(embeddings, args)
-print("Model successfully initialized:", model)
+    # Load data and embeddings.
+    import importlib
+    dataset = importlib.import_module("datasets." + args.data_name)
+    data_path = os.path.join(args.data_dir, args.data_name)
+    data = dataset.DataLoader(data_path, args)  # Load data.
+    args.num_labels = len(data.label_vocab)  # Number of labels.
+    embedding_path = os.path.join(args.data_dir, args.embedding_name)
+    embeddings = data.initial_embedding(args.embedding_dim, embedding_path)  # Load embeddings.
+    print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
-# Train model.
-from runner.trainer import train
-train(model, data, args)
-print("Model successfully trained.")
+    # Initialize model.
+    from models.rationale_3player_classification import Rationale3PlayerClassification
+    model = Rationale3PlayerClassification(embeddings, args)
+    print("Model successfully initialized:", model)
+
+    # Train model.
+    from runner.trainer import train
+    train(model, data, args)
+    print("Model successfully trained.")
+
+elif args.mode == "purge":
+
+    # Perge all checkpoints.
+    from utils.checkpointer import purge
+    purge(args.working_dir)
+    print("All checkpoints purged.")
+
+else:
+    exit("Wrong mode.")
