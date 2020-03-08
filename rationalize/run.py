@@ -17,7 +17,7 @@ parser.add_argument("--working_dir", type=str, default="checkpoints",
                     help="Model folder name.")
 parser.add_argument("--data_name", type=str, default="beer_reviews_single_aspect",
                     help="Dataset name.")
-parser.add_argument("--embedding_name", type=str, default="",
+parser.add_argument("--embedding_name", type=str, default=os.path.join("glove", "glove.6B.100d.txt"),
                     help="Embedding name.")
 parser.add_argument("--random_seed", type=int, default=0,
                     help="Random seed.")
@@ -55,8 +55,8 @@ parser.add_argument("--cell_type", type=str, default="GRU",
                     help="If RNN, cell type, GRU or LSTM.")
 parser.add_argument("--kernel_size", type=int, default=5,
                     help="If CNN, kernel size of the conv1d.")
-parser.add_argument("--batch_size", type=int, default=32,
-                    help="Batch size, 8, 16, 32, etc.")
+parser.add_argument("--batch_size", type=int, default=64,
+                    help="Batch size.")
 parser.add_argument("--lr", type=float, default=0.001,
                     help="Learning rate.")
 parser.add_argument("--lambda_sparsity", type=float, default=1.0,
@@ -71,11 +71,11 @@ parser.add_argument("--highlight_percentage", type=float, default=0.3,
                     help="Highlight percentage.")
 
 # Training arguments.
-parser.add_argument("--num_iteration", type=int, default=2000,
+parser.add_argument("--num_iteration", type=int, default=10000,
                     help="Number of iterations to train.")
-parser.add_argument("--display_iteration", type=int, default=200,
+parser.add_argument("--display_iteration", type=int, default=1000,
                     help="Number of iterations to display results.")
-parser.add_argument("--eval_iteration", type=int, default=200,
+parser.add_argument("--eval_iteration", type=int, default=1000,
                     help="Number of iterations to evaluate.")
 
 # Parse arguments.
