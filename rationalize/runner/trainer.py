@@ -9,7 +9,7 @@ from collections import deque
 from tqdm import tqdm
 
 from runner.evaluator import evaluate
-from runner.utils import get_accuracy, get_sparsity, get_continuity
+from runner.utils import get_batch_accuracy, get_batch_sparsity, get_batch_continuity
 
 
 def train(model, data, args):
