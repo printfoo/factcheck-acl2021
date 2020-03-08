@@ -2,28 +2,10 @@
 
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 
 import numpy as np
-
-
-def _get_sparsity(z, mask):
-    mask_z = z * mask
-    seq_lengths = torch.sum(mask, dim=1)
-    sparsity_count = torch.sum(mask_z, dim=-1)
-    sparsity_ratio = sparsity_count / seq_lengths  # (batch_size,).
-    return sparsity_ratio
-
-
-def _get_continuity(z, mask):
-    mask_z = z * mask
-    seq_lengths = torch.sum(mask, dim=1) 
-    mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1) 
-    continuity_count = torch.sum(torch.abs(mask_z - mask_z_), dim=-1)
-    continuity_ratio = continuity_count / seq_lengths  # (batch_size,).
-    return continuity_ratio
+from runner.utils import get_accuracy, get_sparsity, get_continuity
 
 
 def evaluate(model, data, args, set_name):
@@ -59,14 +41,12 @@ def evaluate(model, data, args, set_name):
         # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)
         _, anti_y_pred = torch.max(anti_predict, dim=1)
-        correct += np.float((y_pred == batch_y_).sum().item())
-        anti_correct += np.float((anti_y_pred == batch_y_).sum().item())
+        correct += get_accuracy(y_pred, batch_y_)
+        anti_correct += get_accuracy(anti_y_pred, batch_y_)
         
         # Evaluate sparsity and continuity measures..
-        sparsity_ratio = _get_sparsity(z, batch_m_)
-        sparsity_total += sparsity_ratio.sum().item()
-        continuity_ratio = _get_continuity(z, batch_m_)
-        continuity_total += continuity_ratio.sum().item()
+        sparsity_total += get_sparsity(z, batch_m_)
+        continuity_total += get_continuity(z, batch_m_)
 
     # Average.
     acc = correct / total

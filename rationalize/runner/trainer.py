@@ -1,8 +1,6 @@
 # coding: utf-8
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 
 import numpy as np
@@ -11,6 +9,7 @@ from collections import deque
 from tqdm import tqdm
 
 from runner.evaluator import evaluate
+from runner.utils import get_accuracy, get_sparsity, get_continuity
 
 
 def train(model, data, args):
@@ -63,6 +62,8 @@ def train(model, data, args):
 
         # Evaluate classification accuarcy.
         _, y_pred = torch.max(predict, dim=1)
+        _, anti_y_pred = torch.max(anti_predict, dim=1)
+
         acc = np.float((y_pred == batch_y_).sum().data) / args.batch_size
         train_accs.append(acc)
         train_losses.append(losses["e_loss"])
