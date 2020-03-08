@@ -5,7 +5,7 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
-from runner.utils import get_batch_accuracy, get_batch_sparsity, get_batch_continuity
+from runner.metrics import get_batch_accuracy, get_batch_sparsity, get_batch_continuity
 
 
 def evaluate(model, data, args, set_name):

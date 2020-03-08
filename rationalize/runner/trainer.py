@@ -9,7 +9,7 @@ from collections import deque
 from tqdm import tqdm
 
 from runner.evaluator import evaluate
-from runner.utils import get_batch_accuracy, get_batch_sparsity, get_batch_continuity
+from runner.metrics import get_batch_accuracy, get_batch_sparsity, get_batch_continuity
 
 
 def train(model, data, args):
@@ -36,6 +36,10 @@ def train(model, data, args):
 
     best_dev_acc = 0.0
     best_test_acc = 0.0
+    tmp_acc = 0.0
+    tmp_anti_acc = 0.0
+    tmp_sparsity = 0.0
+    tmp_continuity = 0.0
 
     # Start training iterations.
     for i in tqdm(range(args.num_iteration)):
@@ -66,15 +70,15 @@ def train(model, data, args):
         # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)
         _, anti_y_pred = torch.max(anti_predict, dim=1)
-        accs["train"].append(get_batch_accuracy(y_pred, batch_y_))
-        anti_accs["train"].append(get_batch_accuracy(anti_y_pred, batch_y_))
+        tmp_acc += get_batch_accuracy(y_pred, batch_y_)
+        tmp_anti_acc += get_batch_accuracy(anti_y_pred, batch_y_)
 
         # Evaluate sparsity and continuity measures.
-        sparsities["train"].append(get_batch_sparsity(z, batch_m_))
-        continuities["train"].append(get_batch_continuity(z, batch_m_))
+        tmp_sparsity += get_batch_sparsity(z, batch_m_)
+        tmp_continuity += get_batch_continuity(z, batch_m_)
 
         # Display every args.display_iteration.
-        if (i+1) % args.display_iteration == 0:
+        if i > 0 and i % args.display_iteration == 0:
             print("supervised_loss %.4f, sparsity_loss %.4f, continuity_loss %.4f" %
                   (losses["e_loss"], torch.mean(sparsity_loss).data, torch.mean(continuity_loss).data))
             y_ = y_vec[2]
@@ -86,7 +90,7 @@ def train(model, data, args):
             print("gold label:", data.idx2label[y_], "pred label:", data.idx2label[pred_.item()])
             data.display_example(x_, z_)
 
-        if (i+1) % args.eval_iteration == 0:
+        if i > 0 and i % args.eval_iteration == 0:
 
             # Eval dev set.
             dev_acc, dev_anti_acc, dev_sparsity, dev_continuity = evaluate(model, data, args, "dev")
@@ -108,6 +112,20 @@ def train(model, data, args):
             continuities["test"].append(test_continuity)
             if test_acc > best_test_acc:  # If historically best on test set.
                 best_test_acc = test_acc
+
+            # Adds train set metrics.
+            accs["train"].append(tmp_acc / args.eval_iteration)
+            anti_accs["train"].append(tmp_anti_acc / args.eval_iteration)
+            sparsities["train"].append(tmp_sparsity / args.eval_iteration)
+            continuities["train"].append(tmp_continuity / args.eval_iteration)
+            tmp_acc = 0.0
+            tmp_anti_acc = 0.0
+            tmp_sparsity = 0.0
+            tmp_continuity = 0.0
+
+            # Save checkpoint.
+            snapshot_path = os.path.join(args.working_dir, "i_%s.ckpt" % i)
+            torch.save(model.state_dict(), snapshot_path)
 
     for metric in [accs, anti_accs, sparsities, continuities]:
         record_path = os.path.join(args.working_dir, metric["name"] + ".json")
