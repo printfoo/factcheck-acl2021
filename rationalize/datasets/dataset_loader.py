@@ -209,7 +209,7 @@ class SentenceClassification(object):
             word = self.idx_2_word[word_index]
             if display_flag:
                 output_word = "%s %s%s" % (fg(1), word, attr(0))
-                sys.stdout.write(output_word)
+                print(output_word, end="")
             else:
-                sys.stdout.write(" " + word)
-        sys.stdout.flush()
+                print(" " + word, end="")
+        print()
