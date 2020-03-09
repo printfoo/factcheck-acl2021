@@ -17,7 +17,7 @@ parser.add_argument("--working_dir", type=str, default="checkpoints",
                     help="Model folder name.")
 parser.add_argument("--data_name", type=str, default="beer_reviews_single_aspect",
                     help="Dataset name.")
-parser.add_argument("--embedding_name", type=str, default=os.path.join("glove", "glove.6B.100d.txt?"),
+parser.add_argument("--embedding_name", type=str, default=os.path.join("glove", "glove.6B.200d.txt"),
                     help="Embedding name.")
 parser.add_argument("--random_seed", type=int, default=0,
                     help="Random seed.")
@@ -31,21 +31,19 @@ parser.add_argument("--score_threshold", type=float, default=0.6,
                     help="Threshold for positive/negative labels.")
 parser.add_argument("--split_ratio", type=float, default=0.1,
                     help="Split ratio for train/dev sets.")
-parser.add_argument("--aspect", type=int, default=1,
-                    help="Aspect of beer, 0-3 for apperance, aroma, palate, taste.")
 parser.add_argument("--freq_threshold", type=int, default=1,
                     help="Minimum frequency for vocabulary.")
 parser.add_argument("--truncate_num", type=int, default=300,
                     help="Maximum number of tokens to truncate.")
 
 # Model arguments.,
-parser.add_argument("--model_type", type=str, default="RNN",
+parser.add_argument("--model_type", type=str, default="CNN",
                     help="Model type, RNN or CNN.")
 parser.add_argument("--hidden_dim", type=int, default=400,
                     help="Dimension of hidden states.")
 parser.add_argument("--z_dim", type=int, default=2,
                     help="Dimension of rationale mask, always 2 for now.")
-parser.add_argument("--embedding_dim", type=int, default=100,
+parser.add_argument("--embedding_dim", type=int, default=200,
                     help="Dimension of word embeddings.")
 parser.add_argument("--fine_tuning", type=bool, default=False,
                     help="Whether to fine tune embeddings or not.")
@@ -67,13 +65,13 @@ parser.add_argument("--lambda_anti", type=float, default=1.0,
                     help="Control the importance of anti-predictor.")
 parser.add_argument("--exploration_rate", type=float, default=0.05,
                     help="Exploration rate.")
-parser.add_argument("--count_tokens", type=int, default=8,
-                    help="Average length of rationales.")
-parser.add_argument("--count_pieces", type=int, default=4,
-                    help="Average number of rationales.")
+parser.add_argument("--rationale_len", type=int, default=8,
+                    help="Suggested length of rationales.")
+parser.add_argument("--rationale_num", type=int, default=4,
+                    help="Suggested number of rationales.")
 
 # Training arguments.
-parser.add_argument("--num_iteration", type=int, default=1000,
+parser.add_argument("--num_iteration", type=int, default=2000,
                     help="Number of iterations to train.")
 parser.add_argument("--display_iteration", type=int, default=100,
                     help="Number of iterations to display results.")

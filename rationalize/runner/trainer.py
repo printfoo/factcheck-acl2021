@@ -74,8 +74,6 @@ def train(model, data, args):
 
         # Display every args.display_iteration.
         if i % args.display_iteration == 0:
-            print("supervised_loss %.4f, sparsity_loss %.4f, continuity_loss %.4f" %
-                  (losses["e_loss"], torch.mean(sparsity_loss).data, torch.mean(continuity_loss).data))
             y_ = y_vec[2]
             pred_ = y_pred.data[2]
             x_ = x_mat[2,:]
@@ -85,6 +83,7 @@ def train(model, data, args):
             print("gold label:", data.idx2label[y_], "pred label:", data.idx2label[pred_.item()])
             data.display_example(x_, z_)
 
+        # Eval every args.eval_iteration.
         if i % args.eval_iteration == 0:
 
             # Eval dev set.
@@ -93,11 +92,7 @@ def train(model, data, args):
             anti_accs["dev"].append(dev_anti_acc)
             sparsities["dev"].append(dev_sparsity)
             continuities["dev"].append(dev_continuity)
-            if dev_acc > best_dev_acc:  # If historically best on dev set.
-                best_dev_acc = dev_acc
-                snapshot_path = os.path.join(args.working_dir, "trained.ckpt")
-                print("new best dev:", dev_acc, "model saved at", snapshot_path)
-                torch.save(model.state_dict(), snapshot_path)
+            best_dev_acc = max(best_dev_acc, dev_acc)  # Update dev record.
 
             # Eval test set.
             test_acc, test_anti_acc, test_sparsity, test_continuity = evaluate(model, data, args, "test")
@@ -105,8 +100,7 @@ def train(model, data, args):
             anti_accs["test"].append(test_anti_acc)
             sparsities["test"].append(test_sparsity)
             continuities["test"].append(test_continuity)
-            if test_acc > best_test_acc:  # If historically best on test set.
-                best_test_acc = test_acc
+            best_test_acc = max(best_test_acc, test_acc)  # Update test record.
 
             # Adds train set metrics.
             accs["train"].append(tmp_acc / args.eval_iteration)
@@ -122,6 +116,8 @@ def train(model, data, args):
             snapshot_path = os.path.join(args.working_dir, "i_%s.ckpt" % i)
             torch.save(model.state_dict(), snapshot_path)
 
+    print("Best dev accuracy:", best_dev_acc)
+    print("Best test accuracy:", best_test_acc)
     for metric in [accs, anti_accs, sparsities, continuities]:
         record_path = os.path.join(args.working_dir, metric["name"] + ".json")
         with open(record_path, "w") as f:

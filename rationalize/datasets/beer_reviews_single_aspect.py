@@ -18,13 +18,12 @@ class DataLoader(SentenceClassification):
         Initialize a dataset for beer reviews:
         Inputs:
             data_dir -- the directory of the dataset.
-            truncate_num -- max length for tokens.
-            freq_threshold -- min frequency for tokens.
-            aspect -- an integer (0-3) for beer aspect: apperance, aroma, palate, taste.
-            score_threshold -- the threshold (0-1) for pos/neg.
-            split_ratio -- split ratio for train/dev.
+            args.truncate_num -- max length for tokens.
+            args.freq_threshold -- min frequency for tokens.
+            args.score_threshold -- the threshold (0-1) for pos/neg.
+            args.split_ratio -- split ratio for train/dev.
         """
-        self.aspect = args.aspect 
+        self.aspect = 0  # 0-3 for apperance/aroma/palate/taste, only 0 is supported.
         self.score_threshold = args.score_threshold
         self.split_ratio = args.split_ratio
         self.data_sets = {}
