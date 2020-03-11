@@ -37,7 +37,7 @@ parser.add_argument("--truncate_num", type=int, default=300,
                     help="Maximum number of tokens to truncate.")
 
 # Model arguments.,
-parser.add_argument("--model_type", type=str, default="CNN",
+parser.add_argument("--model_type", type=str, default="RNN",
                     help="Model type, RNN or CNN.")
 parser.add_argument("--hidden_dim", type=int, default=400,
                     help="Dimension of hidden states.")
@@ -113,6 +113,15 @@ if args.mode == "train":
     from runner.trainer import train
     train(model, data, args)
     print("Model successfully trained.")
+
+elif args.mode == "test":
+
+    # Test data loader.
+    import importlib
+    dataset = importlib.import_module("datasets." + args.data_name)
+    data_path = os.path.join(args.data_dir, args.data_name)
+    data = dataset.test_data(data_path, args)
+    print("Data loader is tested")
 
 elif args.mode == "purge":
 
