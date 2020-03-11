@@ -2,6 +2,9 @@
 *.pyc
 __pycache__
 
+# Raw datasets.
+data/*/raw/*
+
 # Word embeddings.
 data/glove/*
 
