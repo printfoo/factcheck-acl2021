@@ -3,7 +3,7 @@
 __pycache__
 
 # Raw datasets.
-data/*/raw/*
+data/*/raw/*.gz
 
 # Word embeddings.
 data/glove/*
