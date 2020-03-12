@@ -8,6 +8,6 @@ data/*/raw/*.gz
 # Word embeddings.
 data/glove/*
 
-# Checkpoints.
-checkpoints/*/*.ckpt
-checkpoints/*/*.json
+# Model output.
+output/*/*.ckpt
+output/*/*.json

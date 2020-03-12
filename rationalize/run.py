@@ -13,8 +13,8 @@ parser.add_argument("--mode", type=str, default="train",
 # Environment arguments.
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--ckpt_dir", type=str, default="checkpoints",
-                    help="Model folder name.")
+parser.add_argument("--output_dir", type=str, default="output",
+                    help="Output folder name.")
 parser.add_argument("--random_seed", type=int, default=0,
                     help="Random seed.")
 parser.add_argument("--cuda", type=bool, default=True,
@@ -81,7 +81,7 @@ args.command = " ".join(["python"] + sys.argv)
 print("Command with argumanets:", args.command)
 
 # Additional arguments.
-args.working_dir = os.path.join(args.ckpt_dir, args.data_name)
+args.working_dir = os.path.join(args.output_dir, args.data_name)
 args.embedding_dir = os.path.join(args.data_dir, args.embedding_name, args.embedding_name + ".6B.%sd.txt" % args.embedding_dim)
 
 if args.mode == "train":
