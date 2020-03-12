@@ -45,7 +45,7 @@ class DataCleaner(object):
     Dataset cleaner for beer reviews.
     """
 
-    def __init__(self, data_dir="raw", score_threshold=0.6):
+    def __init__(self, data_dir="raw", score_threshold=0.3):
         """
         Inputs:
             data_dir -- the directory of the dataset.
@@ -76,17 +76,22 @@ class DataCleaner(object):
         rationale_test["split"] = "test"
         rationale = pd.concat([rationale_dev, rationale_test])
         rationale["rev_id"] = rationale["platform_comment_id"]
-        rationale["rationale"] = rationale["rationale"].apply(lambda r: "".join([str(_) for _ in eval(r)]))
+        rationale["rationale"] = rationale["rationale"].apply(lambda r: "".join(str(_) for _ in eval(r)))
         
         # Merge sentence and label.
         df = sentence.merge(label, on="rev_id", how="inner").merge(rationale, on="rev_id", how="left")
         df["comment"] = df.apply(process_comment, axis=1)
-        df = df.dropna(subset={"comment"}).fillna("")
+        df = df.dropna(subset={"comment"})
+        df["split_y"] = df["split_y"].fillna("train")
+        df = df.fillna("")
+        df["label"] = df["attack"].apply(lambda a: "1" if a >= self.score_threshold else "0")
 
         # Save data.
-        for split in ["dev", "test"]:
-            data = df[df["split_x"] == split][["comment", "rationale"]].values
-            print(data)
+        for split in ["train", "dev", "test"]:
+            data = df[df["split_y"] == split][["label", "comment", "rationale"]].values
+            content = "\n".join("\t".join(field for field in line) for line in data)
+            with open(split + ".csv", "w") as f:
+                f.write(content)
 
 
 if __name__ == "__main__":
