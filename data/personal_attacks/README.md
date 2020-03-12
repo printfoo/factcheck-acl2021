@@ -1,9 +1,9 @@
-# Beer Reviews Dataset.
+# Personal Attacks Dataset.
 
 Download raw dataset at:
 ```
-http://people.csail.mit.edu/taolei/beer/reviews.aspect0.train.txt.gz
-http://people.csail.mit.edu/taolei/beer/reviews.aspect0.heldout.txt.gz
+https://ndownloader.figshare.com/files/7554634
+https://ndownloader.figshare.com/files/7554637
 ```
 
 Clean data *at this directory*:

@@ -3,11 +3,12 @@
 __pycache__
 
 # Raw datasets.
-data/*/raw/*.gz
+data/*/raw/*
+!data/*/raw/download.sh
 
 # Word embeddings.
 data/glove/*
 
 # Model output.
-output/*/*.ckpt
-output/*/*.json
+output/*
+!output/*/README.md
