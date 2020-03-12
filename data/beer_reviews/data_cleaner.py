@@ -20,7 +20,7 @@ class DataCleaner(object):
         self.score_threshold = score_threshold
         self.split_ratio = split_ratio
         self.label_vocab = {}
-        
+
 
     def clean(self):
         with open(os.path.join(self.data_dir, "sec_name_dict.json"), "r") as filtered:
