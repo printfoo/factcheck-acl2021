@@ -14,13 +14,7 @@ python data_cleaner.py
 ```
 
 The dataset was originally released by:  
-```
-Ellery Wulczyn, Nithum Thain, Lucas Dixon,  
-"Ex Machina: Personal Attacks Seen at Scale", WWW 2017
-```
+- Ellery Wulczyn, Nithum Thain, Lucas Dixon, **Ex Machina: Personal Attacks Seen at Scale**, *WWW 2017*
 
 Additional rationale annotations and part of data cleaning script was developed by:
-```
-Samuel Carton, Qiaozhu Mei, Paul Resnick,  
-"Extractive Adversarial Networks: High-Recall Explanations for Identifying Personal Attacks in Social Media Posts", EMNLP 2018
-```
+- Samuel Carton, Qiaozhu Mei, Paul Resnick, **Extractive Adversarial Networks: High-Recall Explanations for Identifying Personal Attacks in Social Media Posts**, *EMNLP 2018*
