@@ -90,7 +90,7 @@ class DataCleaner(object):
         for split in ["train", "dev", "test"]:
             data = df[df["split_y"] == split][["label", "comment", "rationale"]].values
             content = "\n".join("\t".join(field for field in line) for line in data)
-            with open(split + ".csv", "w") as f:
+            with open(split + ".tsv", "w") as f:
                 f.write(content)
 
 

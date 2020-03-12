@@ -10,5 +10,4 @@ data/*/raw/*
 data/glove/*
 
 # Model output.
-output/*
-!output/*/README.md
+data/*/*.ckpt

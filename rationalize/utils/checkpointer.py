@@ -1,13 +1,18 @@
 # coding: utf-8
 
 
-import os
-from glob import glob
+import os, shutil
+
+
+# Initialize checkpoint path.
+def init_ckpt(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+        with open(os.path.join(path, "README.md"), "w") as f:
+            f.write("# Checkpoints.")
 
 
 # Purge all saved checkpoints.
 def purge(path):
-    for f in glob(os.path.join(path, "*.ckpt")):
-        os.remove(f)
-    for f in glob(os.path.join(path, "*.json")):
-        os.remove(f)
+    if os.path.exists(path):
+        shutil.rmtree(path)

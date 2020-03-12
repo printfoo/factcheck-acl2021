@@ -49,7 +49,7 @@ class Rationale3PlayerClassification(nn.Module):
     def _create_embed_layer(self, embeddings):
         embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
         embed_layer.weight.data = torch.from_numpy(embeddings)
-        embed_layer.weight.requires_grad = self.args.fine_tuning
+        embed_layer.weight.requires_grad = bool(self.args.fine_tuning)
         return embed_layer
 
 
