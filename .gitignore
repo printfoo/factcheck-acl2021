@@ -9,5 +9,5 @@ data/*/raw/*.gz
 data/glove/*
 
 # Checkpoints.
-checkpoints/*.ckpt
-checkpoints/*.json
+checkpoints/*/*.ckpt
+checkpoints/*/*.json

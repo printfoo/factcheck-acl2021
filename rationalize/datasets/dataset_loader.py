@@ -5,6 +5,8 @@ import random, sys, os
 import numpy as np
 from colored import fg, attr, bg
 
+from datasets.dataset_operator import SentenceClassificationSet
+
 
 class SentenceClassification(object):
     """
@@ -12,28 +14,34 @@ class SentenceClassification(object):
     Functions need overwriting for a specific dataset.
     """
 
-    def __init__(self, data_dir, truncate_num=300, freq_threshold=1):
+    def __init__(self, data_dir, args):
         """
         Initialize a dataset for sentence classification:
         Inputs:
             data_dir -- the directory of the dataset.
-            truncate_num -- max length for tokens.
-            freq_threshold -- min frequency for tokens.
-            split_ratio -- split ratio for train/dev.
+            args.truncate_num -- max length for tokens.
+            args.freq_threshold -- min frequency for tokens.
         """
         self.data_dir = data_dir
-        self.truncate_num = truncate_num
-        self.freq_threshold = freq_threshold
+        self.truncate_num = args.truncate_num
+        self.freq_threshold = args.freq_threshold
         
         self.word_vocab = {"<PAD>": 0, "<START>": 1, "<END>": 2, "<UNK>": 3}
         self.label_vocab = {}
 
         print("Loading dataset.")
-        self.load_dataset()
+        self.data_sets = {"train": None, "dev": None, "test": None}
+        for data_set in self.data_sets:
+            self.load_dataset(data_set)
+            self.data_sets[data_set].print_info()
+
+        print("Building vocabulary.")
+        self._build_vocab()
 
         print("Converting token to indexes.")
         self.idx_2_word = {val: key for key, val in self.word_vocab.items()}
         self.idx2label = {val: key for key, val in self.label_vocab.items()}
+
 
     def _build_vocab(self):
         """
@@ -103,7 +111,28 @@ class SentenceClassification(object):
 
         print('Size of the raw vocabulary:', len(word_freq_dict))
         return word_freq_dict
-     
+
+
+    def load_dataset(self, data_set):
+        """
+        Load dataset and store to self.data_sets.
+        Inputs:
+            data_set -- the name of the dataset, train/dev/test.
+        """
+
+        # Load instances.
+        self.data_sets[data_set] = SentenceClassificationSet()
+        file_path = os.path.join(self.data_dir, data_set + ".tsv")
+        with open(file_path, "r") as f:
+            for line in f:
+                label, tokens, rationale = line.split("\t")
+                label = int(label)
+                if label not in self.label_vocab:
+                    self.label_vocab[label] = label
+                tokens = tokens.split(" ")
+                self.data_sets[data_set].add_one(tokens, label, truncate_num=self.truncate_num)
+
+
     def initial_embedding(self, embedding_size, embedding_path=None):
         """
         This function initialize embedding with glove embedding.
@@ -147,6 +176,7 @@ class SentenceClassification(object):
 
         return embeddings
 
+
     def get_train_batch(self, batch_size, sort=False):
         """
         Randomly sample a batch to train.
@@ -163,7 +193,8 @@ class SentenceClassification(object):
         batch_idx = np.random.randint(0, data_set.size(), size=batch_size)
         
         return self.get_batch(set_id, batch_idx, sort)
-    
+
+
     def get_batch(self, set_id, batch_idx, sort=False):
         """
         Randomly sample a batch to train.
@@ -196,6 +227,7 @@ class SentenceClassification(object):
         
         return x_mat, y_vec, x_mask
 
+
     def display_example(self, x, z=None, threshold=0.9):
         """
         Display sentences and rationales.
@@ -213,3 +245,9 @@ class SentenceClassification(object):
             else:
                 print(" " + word, end="")
         print()
+
+
+# Test DataLoader.
+def test_data(data_dir, args):
+    dataloader = SentenceClassification(data_dir, args)
+    print(dataloader)

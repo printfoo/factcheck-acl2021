@@ -13,12 +13,8 @@ parser.add_argument("--mode", type=str, default="train",
 # Environment arguments.
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--working_dir", type=str, default="checkpoints",
+parser.add_argument("--ckpt_dir", type=str, default="checkpoints",
                     help="Model folder name.")
-parser.add_argument("--data_name", type=str, default="beer_reviews_single_aspect",
-                    help="Dataset name.")
-parser.add_argument("--embedding_name", type=str, default=os.path.join("glove", "glove.6B.200d.txt"),
-                    help="Embedding name.")
 parser.add_argument("--random_seed", type=int, default=0,
                     help="Random seed.")
 parser.add_argument("--cuda", type=bool, default=True,
@@ -27,10 +23,10 @@ parser.add_argument("--gpu_id", type=str, default="1",
                     help="ID of the GPU chip to use.")
 
 # Data arguments.
-parser.add_argument("--score_threshold", type=float, default=0.6,
-                    help="Threshold for positive/negative labels.")
-parser.add_argument("--split_ratio", type=float, default=0.1,
-                    help="Split ratio for train/dev sets.")
+parser.add_argument("--data_name", type=str, default="beer_reviews",
+                    help="Dataset name.")
+parser.add_argument("--embedding_name", type=str, default="glove",
+                    help="Embedding name.")
 parser.add_argument("--freq_threshold", type=int, default=1,
                     help="Minimum frequency for vocabulary.")
 parser.add_argument("--truncate_num", type=int, default=300,
@@ -43,7 +39,7 @@ parser.add_argument("--hidden_dim", type=int, default=400,
                     help="Dimension of hidden states.")
 parser.add_argument("--z_dim", type=int, default=2,
                     help="Dimension of rationale mask, always 2 for now.")
-parser.add_argument("--embedding_dim", type=int, default=200,
+parser.add_argument("--embedding_dim", type=int, default=100,
                     help="Dimension of word embeddings.")
 parser.add_argument("--fine_tuning", type=bool, default=False,
                     help="Whether to fine tune embeddings or not.")
@@ -84,6 +80,10 @@ args.extras = extras
 args.command = " ".join(["python"] + sys.argv)
 print("Command with argumanets:", args.command)
 
+# Additional arguments.
+args.working_dir = os.path.join(args.ckpt_dir, args.data_name)
+args.embedding_dir = os.path.join(args.data_dir, args.embedding_name, args.embedding_name + ".6B.%sd.txt" % args.embedding_dim)
+
 if args.mode == "train":
 
     # Set random seeds.
@@ -95,13 +95,11 @@ if args.mode == "train":
     random.seed(args.random_seed)
 
     # Load data and embeddings.
-    import importlib
-    dataset = importlib.import_module("datasets." + args.data_name)
+    from datasets.dataset_loader import SentenceClassification
     data_path = os.path.join(args.data_dir, args.data_name)
-    data = dataset.DataLoader(data_path, args)  # Load data.
+    data = SentenceClassification(data_path, args)  # Load data.
     args.num_labels = len(data.label_vocab)  # Number of labels.
-    embedding_path = os.path.join(args.data_dir, args.embedding_name)
-    embeddings = data.initial_embedding(args.embedding_dim, embedding_path)  # Load embeddings.
+    embeddings = data.initial_embedding(args.embedding_dim, args.embedding_dir)  # Load embeddings.
     print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
     # Initialize model.
@@ -117,10 +115,9 @@ if args.mode == "train":
 elif args.mode == "test":
 
     # Test data loader.
-    import importlib
-    dataset = importlib.import_module("datasets." + args.data_name)
+    from datasets.dataset_loader import test_data
     data_path = os.path.join(args.data_dir, args.data_name)
-    data = dataset.test_data(data_path, args)
+    data = test_data(data_path, args)  # Load data.
     print("Data loader is tested")
 
 elif args.mode == "purge":
