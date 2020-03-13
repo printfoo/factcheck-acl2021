@@ -111,8 +111,8 @@ class Rationale3PlayerClassification(nn.Module):
         Compute regularization loss, based on a given rationale sequence.
         Inputs:
             z -- torch variable, "binary" rationale, (batch_size, sequence_length).
-            count_tokens -- average length of rationales.
-            count_pieces -- average number of rationales.
+            rationale_len -- suggested upper bound of total tokens of all rationales.
+            rationale_num -- suggested number of rationales.
         Outputs:
             continuity_loss --  \sum_{i} | z_{i-1} - z_{i} |.
             sparsity_loss -- |mean(z_{i}) - percent|.
