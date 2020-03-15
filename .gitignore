@@ -2,6 +2,9 @@
 *.pyc
 __pycache__
 
+# MacOS.
+.DS_Store
+
 # Raw datasets.
 data/*/raw/*
 !data/*/raw/download.sh
