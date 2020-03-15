@@ -5,7 +5,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+
 import numpy as np
+from collections import deque
 
 from models.nn import RnnModel
 from models.generator import Generator
@@ -42,6 +44,9 @@ class Rationale3PlayerClassification(nn.Module):
         self.exploration_rate = args.exploration_rate
         self.rationale_len = args.rationale_len
         self.rationale_num = args.rationale_num
+
+        self.z_history_rewards = deque(maxlen=200)
+        self.z_history_rewards.append(0.)
 
         self.loss_func = nn.CrossEntropyLoss(reduce=False)
 
@@ -178,8 +183,12 @@ class Rationale3PlayerClassification(nn.Module):
         return rl_loss, rewards, continuity_loss, sparsity_loss
 
 
-    def train_one_step(self, x, label, baseline, mask):
-        
+    def train_one_step(self, x, label, mask):
+
+        baseline = Variable(torch.FloatTensor([float(np.mean(self.z_history_rewards))]))
+        if self.use_cuda:
+            baseline = baseline.cuda()
+
         predict, anti_predict, z, neg_log_probs = self.forward(x, mask)
         
         e_loss_anti = torch.mean(self.loss_func(anti_predict, label))        
@@ -187,6 +196,9 @@ class Rationale3PlayerClassification(nn.Module):
         loss_tuple = self._get_loss(predict, anti_predict, z, neg_log_probs, baseline, mask, label)
         rl_loss, rewards, continuity_loss, sparsity_loss = loss_tuple
         
+        z_batch_reward = torch.mean(rewards).item()
+        self.z_history_rewards.append(z_batch_reward)
+
         # Backprop loss to predictor E.
         e_loss_anti.backward()
         self.opt_E_anti.step()

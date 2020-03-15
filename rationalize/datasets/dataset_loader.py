@@ -14,15 +14,15 @@ class SentenceClassification(object):
     Functions need overwriting for a specific dataset.
     """
 
-    def __init__(self, data_dir, args):
+    def __init__(self, data_path, args):
         """
         Initialize a dataset for sentence classification:
         Inputs:
-            data_dir -- the directory of the dataset.
+            data_path -- the directory of the dataset.
             args.truncate_num -- max length for tokens.
             args.freq_threshold -- min frequency for tokens.
         """
-        self.data_dir = data_dir
+        self.data_path = data_path
         self.truncate_num = args.truncate_num
         self.freq_threshold = args.freq_threshold
         
@@ -122,59 +122,50 @@ class SentenceClassification(object):
 
         # Load instances.
         self.data_sets[data_set] = SentenceClassificationSet()
-        file_path = os.path.join(self.data_dir, data_set + ".tsv")
+        file_path = os.path.join(self.data_path, data_set + ".tsv")
         with open(file_path, "r") as f:
             for line in f:
-                label, tokens, rationale = line.split("\t")
-                label = int(label)
+                label, tokens = line.split("\t")[:2]
                 if label not in self.label_vocab:
-                    self.label_vocab[label] = label
+                    self.label_vocab[label] = len(self.label_vocab)
+                label = self.label_vocab[label]
                 tokens = tokens.split(" ")
                 self.data_sets[data_set].add_one(tokens, label, truncate_num=self.truncate_num)
 
 
-    def initial_embedding(self, embedding_size, embedding_path=None):
+    def initial_embedding(self, method="random", size=100, path=None):
         """
         This function initialize embedding with glove embedding.
         If a word has embedding in glove, use the glove one.
         If not, initial with random.
         Inputs:
-            embedding_size -- the dimension of the word embedding.
-            embedding_path -- the path to the glove embedding file.
+            method -- the method for embedding, onehot/random/pretrained.
+            size -- the dimension of the word embedding, ignored if method==random.
+            path -- the path to the embedding file, if method==pretrained.
         Outputs:
             embeddings -- a numpy matrix in shape of (vocab_size, embedding_dim),
                           the ith row indicates the word with index i from word_ind_dict.
         """
-
-        # Initialize a numpy embedding matrix.
-        embeddings = 0.1 * np.random.randn(len(self.word_vocab), embedding_size).astype(np.float32)
-
-        # Replace <PAD> by all zeros.
-        embeddings[self.word_vocab["<PAD>"], :] = np.zeros(embedding_size, dtype=np.float32)
-
-        # Load pre-trained embeddings if specified.
-        if not embedding_path:
-            print("No specified embedding file.")
-            print("Embedding are randomly initialized.")
-        elif not os.path.isfile(embedding_path):
-            print("Specified embedding file does not exist:", embedding_path)
-            print("Embedding are randomly initialized.")
-        else:
-            print("Loading embeddings from:", embedding_path)
-            f = open(embedding_path, "r")
-            counter = 0
-            for line in f:
-                data = line.strip().split(" ")
-                word = data[0].strip()
-                embedding = data[1::]
-                embedding = list(map(np.float32, embedding))
-                if word in self.word_vocab:
-                    embeddings[self.word_vocab[word], :] = embedding
-                    counter += 1
-            f.close()
-            print("%d embeddings are initialized." % counter)
-
-        return embeddings
+        
+        if method in {"random", "pretrained"}:  # Fixed-size embedding.
+            embeddings = 0.1 * np.random.randn(len(self.word_vocab), size).astype(np.float32)  # Random.
+            embeddings[self.word_vocab["<PAD>"], :] = np.zeros(size, dtype=np.float32)  # <PAD>=0
+            if method == "random":
+                return embeddings
+            else:  # Load pre-trained embeddings if specified.
+                with open(path, "r") as f:
+                    print("Loading embeddings from:", path)
+                    for line in f:
+                        data = line.strip().split(" ")
+                        word = data[0].strip()
+                        if word in self.word_vocab:
+                            embeddings[self.word_vocab[word], :] = list(map(np.float32, data[1::]))
+                return embeddings
+        elif method in {"onehot"}:  # One-hot embedding of word_vocab size.
+            embeddings = np.zeros((len(self.word_vocab), len(self.word_vocab))).astype(np.float32)  # Ohe-hot.
+            for word in self.word_vocab:
+                embeddings[self.word_vocab[word], self.word_vocab[word]] = 1
+            return embeddings
 
 
     def get_train_batch(self, batch_size, sort=False):
@@ -248,6 +239,11 @@ class SentenceClassification(object):
 
 
 # Test DataLoader.
-def test_data(data_dir, args):
-    dataloader = SentenceClassification(data_dir, args)
-    print(dataloader)
+def test_data(data_path, args):
+    # print(dataloader.word_vocab)
+    # print(dataloader.label_vocab)
+    data = SentenceClassification(data_path, args)  # Load data.
+    args.num_labels = len(data.label_vocab)  # Number of labels.
+    embeddings = data.initial_embedding("random", 100)  # Load embeddings.
+    embeddings = data.initial_embedding("onehot", 100)  # Load embeddings.
+    print(embeddings)

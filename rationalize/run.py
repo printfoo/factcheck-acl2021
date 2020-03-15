@@ -9,7 +9,7 @@ parser.add_argument("--mode", type=str, default="train",
                     help="Run mode, train or eval.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--data_name", type=str, default="personal_attacks",
+parser.add_argument("--data_name", type=str, default="beer_reviews",
                     help="Dataset name.")
 parser.add_argument("--config_name", type=str, default="best",
                     help="Dataset name.")
@@ -19,7 +19,16 @@ parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
 args, _ = parser.parse_known_args()
 args.data_path = os.path.join(args.data_dir, args.data_name)
+
+# Read train arguments from .config file.
 args.config_dir = os.path.join(args.data_path, args.config_name + ".config")
+with open(args.config_dir, "r") as f:
+    config = json.load(f)
+train_args = argparse.Namespace(**config)
+train_args.embedding_dir = os.path.join(args.data_dir, train_args.embedding_name,
+                                        train_args.embedding_name + ".6B.%sd.txt" % train_args.embedding_dim)
+train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt")
+
 
 if args.mode == "train":
 
@@ -31,22 +40,17 @@ if args.mode == "train":
     np.random.seed(args.random_seed)
     random.seed(args.random_seed)
     
-    # Train arguments.
+    # Init checkpoints.
     from utils.checkpointer import init_ckpt
-    args.config_dir = os.path.join(args.data_dir, args.data_name, args.config_name + ".config")
-    with open(args.config_dir, "r") as f:
-        config = json.load(f)
-    train_args = argparse.Namespace(**config)
-    train_args.embedding_dir = os.path.join(args.data_dir, train_args.embedding_name,
-                                            train_args.embedding_name + ".6B.%sd.txt" % train_args.embedding_dim)
-    train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt")
     init_ckpt(train_args.working_dir)
 
     # Load data and embeddings.
     from datasets.dataset_loader import SentenceClassification
     data = SentenceClassification(args.data_path, train_args)  # Load data.
     train_args.num_labels = len(data.label_vocab)  # Number of labels.
-    embeddings = data.initial_embedding(train_args.embedding_dim, train_args.embedding_dir)  # Load embeddings.
+    embeddings = data.initial_embedding(train_args.embedding_method,
+                                        train_args.embedding_dim,
+                                        train_args.embedding_dir)  # Load embeddings.
     print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
     # Initialize model.
@@ -58,6 +62,13 @@ if args.mode == "train":
     from runner.trainer import train
     train(model, data, train_args)
     print("Model successfully trained.")
+
+
+elif args.mode == "test":
+
+    # Test data.
+    from datasets.dataset_loader import test_data
+    test_data(args.data_path, train_args)
 
 
 elif args.mode == "purge":
