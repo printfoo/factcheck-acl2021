@@ -14,14 +14,14 @@ from models.generator import Generator
 from models.classifier import Classifier
 
 
-class Rationale3PlayerClassification(nn.Module):
+class Rationale3playerClassification(nn.Module):
     """
-    Rationale3PlayerClassification model.
+    Rationale3playerClassification model.
     Using model.Classifier and model.Generator modules.
     """
 
     def __init__(self, embeddings, args):
-        super(Rationale3PlayerClassification, self).__init__()
+        super(Rationale3playerClassification, self).__init__()
         self.NEG_INF = -1.0e6
         self.args = args
 

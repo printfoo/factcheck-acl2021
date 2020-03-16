@@ -38,7 +38,7 @@ def train(model, data, args):
             batch_y_ = batch_y_.cuda()
 
         # Train one step.
-        losses, predict, z = model.train_one_step(batch_x_, batch_y_, batch_m_)
+        _, predict, z = model.train_one_step(batch_x_, batch_y_, batch_m_)
 
         # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)

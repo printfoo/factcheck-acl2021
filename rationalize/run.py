@@ -9,7 +9,7 @@ parser.add_argument("--mode", type=str, default="train",
                     help="Run mode, train or eval.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--data_name", type=str, default="beer_reviews",
+parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
 parser.add_argument("--config_name", type=str, default="best",
                     help="Dataset name.")
@@ -54,8 +54,11 @@ if args.mode == "train":
     print("Data and embeddings successfully loaded:", data, embeddings.shape)
 
     # Initialize model.
-    from models.rationale_3player_classification import Rationale3PlayerClassification
-    model = Rationale3PlayerClassification(embeddings, train_args)
+    from utils.formatter import format_class
+    import importlib
+    Model = getattr(importlib.import_module("models." + train_args.model_name),
+                    format_class(train_args.model_name))
+    model = Model(embeddings, train_args)
     print("Model successfully initialized:", model)
 
     # Train model.
