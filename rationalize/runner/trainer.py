@@ -12,9 +12,8 @@ from runner.metrics import get_batch_accuracy
 
 
 def train(model, data, args):
-    
-    # Set GPU.
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+   
+    # Use GPU.
     if args.cuda:
         model.cuda()
     print("Using GPU:", torch.cuda.current_device())
@@ -72,8 +71,8 @@ def train(model, data, args):
             tmp_acc = 0.0
 
             # Save checkpoint.
-            snapshot_path = os.path.join(args.working_dir, "i_%s.ckpt" % i)
-            torch.save(model.state_dict(), snapshot_path)
+            snapshot_path = os.path.join(args.working_dir, "i_{:05d}.pt".format(i))
+            torch.save(model, snapshot_path)
 
 
     record_path = os.path.join(args.working_dir, accs["name"] + ".json")

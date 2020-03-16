@@ -2,7 +2,7 @@
 
 
 # Catch passed auguments from run script.
-import sys, os, json
+import importlib, sys, os, json
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", type=str, default="train",
@@ -26,10 +26,15 @@ with open(args.config_dir, "r") as f:
     config = json.load(f)
 train_args = argparse.Namespace(**config)
 train_args.embedding_dir = os.path.join(args.data_dir, train_args.embedding_name,
-                                        train_args.embedding_name + ".6B.%sd.txt" % train_args.embedding_dim)
+                                        train_args.embedding_name + \
+                                        ".6B.%sd.txt" % train_args.embedding_dim)
 train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt")
 
+# Set GPU chips.
+os.environ["CUDA_VISIBLE_DEVICES"] = train_args.gpu_id
 
+
+# Train a model.
 if args.mode == "train":
 
     # Set random seeds.
@@ -58,7 +63,6 @@ if args.mode == "train":
 
     # Initialize model.
     from utils.formatter import format_class
-    import importlib
     Model = getattr(importlib.import_module("models." + train_args.model_name),
                     format_class(train_args.model_name))
     model = Model(embeddings, train_args)
@@ -68,6 +72,20 @@ if args.mode == "train":
     from runner.trainer import train
     train(model, data, train_args)
     print("Model successfully trained.")
+
+
+# Analyze a model. 
+elif args.mode == "analyze":
+
+    # Get best checkpoint.
+    from utils.checkpointer import find_best_ckpt
+    ckpt_path = find_best_ckpt(train_args.working_dir)
+    print("Best checkpoint found:", ckpt_path)
+
+    # Analyze model.
+    analyzer = importlib.import_module("analyzers.analyze_" + train_args.model_name)
+    analyzer.analyze(ckpt_path)
+    print("Model successfully analyzed.")
 
 
 elif args.mode == "test":
