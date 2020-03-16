@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="best",
+parser.add_argument("--config_name", type=str, default="linear",
                     help="Dataset name.")
 parser.add_argument("--output_dir", type=str, default="output",
                     help="Output folder name.")
@@ -40,18 +40,21 @@ if args.mode == "train":
     np.random.seed(args.random_seed)
     random.seed(args.random_seed)
     
-    # Init checkpoints.
+    # Initialize checkpoints.
     from utils.checkpointer import init_ckpt
     init_ckpt(train_args.working_dir)
 
-    # Load data and embeddings.
+    # Load data.
     from datasets.dataset_loader import SentenceClassification
     data = SentenceClassification(args.data_path, train_args)  # Load data.
     train_args.num_labels = len(data.label_vocab)  # Number of labels.
+    print("Data successfully loaded:", data)
+
+    # Initialize embeddings.
     embeddings = data.initial_embedding(train_args.embedding_method,
                                         train_args.embedding_dim,
                                         train_args.embedding_dir)  # Load embeddings.
-    print("Data and embeddings successfully loaded:", data, embeddings.shape)
+    print("Embeddings successfully initialized:", embeddings.shape)
 
     # Initialize model.
     from utils.formatter import format_class
