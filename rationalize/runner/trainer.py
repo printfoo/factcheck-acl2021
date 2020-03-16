@@ -17,6 +17,7 @@ def train(model, data, args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     if args.cuda:
         model.cuda()
+    print("Using GPU:", torch.cuda.current_device())
 
     # Initialize records.
     accs = {"name": "accuracy", "train": [], "dev": [], "test": []}
@@ -26,29 +27,29 @@ def train(model, data, args):
     for i in tqdm(range(args.num_iteration + 1)):
 
         model.train()  # Set model to train mode.
-        x_mat, y_vec, x_mask = data.get_train_batch(batch_size=args.batch_size, sort=True)  # Sample a batch.
+        x, y, m = data.get_train_batch(batch_size=args.batch_size, sort=True)  # Sample a batch.
 
         # Save values to torch tensors.
-        batch_x_ = Variable(torch.from_numpy(x_mat))
-        batch_m_ = Variable(torch.from_numpy(x_mask)).type(torch.FloatTensor)
-        batch_y_ = Variable(torch.from_numpy(y_vec))
+        x = Variable(torch.from_numpy(x))
+        y = Variable(torch.from_numpy(y))
+        m = Variable(torch.from_numpy(m)).type(torch.FloatTensor)
         if args.cuda:
-            batch_x_ = batch_x_.cuda()
-            batch_m_ = batch_m_.cuda()
-            batch_y_ = batch_y_.cuda()
+            x = x.cuda()
+            y = y.cuda()
+            m = m.cuda()
 
         # Train one step.
-        _, predict, z = model.train_one_step(batch_x_, batch_y_, batch_m_)
+        losses, predict, z = model.train_one_step(x, y, m)
 
         # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)
-        tmp_acc += get_batch_accuracy(y_pred, batch_y_)
+        tmp_acc += get_batch_accuracy(y_pred, y)
 
         # Display every args.display_iteration.
         if args.display_iteration and i % args.display_iteration == 0:
-            y_ = y_vec[2]
+            y_ = y[2]
             pred_ = y_pred.data[2]
-            x_ = x_mat[2,:]
+            x_ = m[2,:]
             z_ = z.data[2,:]
             z_b = torch.zeros_like(z)
             z_b_ = z_b.data[2,:]

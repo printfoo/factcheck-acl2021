@@ -162,9 +162,10 @@ class SentenceClassification(object):
                             embeddings[self.word_vocab[word], :] = list(map(np.float32, data[1::]))
                 return embeddings
         elif method in {"onehot"}:  # One-hot embedding of word_vocab size.
-            embeddings = np.zeros((len(self.word_vocab), len(self.word_vocab))).astype(np.float32)  # Ohe-hot.
+            embeddings = np.zeros((len(self.word_vocab), len(self.word_vocab))).astype(np.float32)  # One-hot.
             for word in self.word_vocab:
-                embeddings[self.word_vocab[word], self.word_vocab[word]] = 1
+                if word != "<PAD>": # <PAD>=0
+                    embeddings[self.word_vocab[word], self.word_vocab[word]] = 1
             return embeddings
 
 
@@ -178,11 +179,9 @@ class SentenceClassification(object):
             y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,).
             x_mask -- numpy array in shape of (batch_size, max length of the sequence in the batch).
         """
-        
         set_id = "train"
         data_set = self.data_sets[set_id]
         batch_idx = np.random.randint(0, data_set.size(), size=batch_size)
-        
         return self.get_batch(set_id, batch_idx, sort)
 
 
@@ -190,33 +189,35 @@ class SentenceClassification(object):
         """
         Randomly sample a batch to train.
         Inputs:
-            batch_size: an integer for barch size.
+            batch_size: an integer for batch size.
         Outputs:
-            x_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch).
-            y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,).
-            x_mask -- numpy array in shape of (batch_size, max length of the sequence in the batch).
+            x -- numpy array of input x, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0-|vocab| pointing to a token.
+            y -- numpy array of label y, shape (batch_size,),
+                 only one element per instance 0-|label| pointing to a label.
+            m -- numpy array of mask m, shape (batch_size, seq_len).
+                 each element in the seq_len is of 0/1 selecting a token or not.
         """
 
         data_set = self.data_sets[set_id]
         xs_, ys_, max_x_len_ = data_set.get_samples_from_one_list(batch_idx, self.truncate_num)
 
-        x_masks_ = []
+        ms_ = []
         for i, x in enumerate(xs_):
             xs_[i] = x + (max_x_len_ - len(x)) * [0]
-            x_masks_.append([1] * len(x) + [0] * (max_x_len_ - len(x)))
+            ms_.append([1] * len(x) + [0] * (max_x_len_ - len(x)))  # Mask <PAD>.
             
-        x_mat = np.array(xs_, dtype=np.int64)
-        x_mask = np.array(x_masks_, dtype=np.int64)
-        y_vec = np.array(ys_, dtype=np.int64)
+        x = np.array(xs_, dtype=np.int64)
+        y = np.array(ys_, dtype=np.int64)
+        m = np.array(ms_, dtype=np.int64)
         
-        if sort:  # Sort all according to q_length.
-            x_length = np.sum(x_mask, axis=1)
-            x_sort_idx = np.argsort(-x_length)
-            x_mat = x_mat[x_sort_idx, :]
-            x_mask = x_mask[x_sort_idx, :]
-            y_vec = y_vec[x_sort_idx]
-        
-        return x_mat, y_vec, x_mask
+        if sort:  # Sort all according to seq_len.
+            x_sort_idx = np.argsort(-np.sum(m, axis=1))
+            x = x[x_sort_idx, :]
+            y = y[x_sort_idx]
+            m = m[x_sort_idx, :]
+
+        return x, y, m
 
 
     def display_example(self, x, z=None, threshold=0.9):
