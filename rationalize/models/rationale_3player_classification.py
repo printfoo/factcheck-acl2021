@@ -215,5 +215,5 @@ class Rationale3PlayerClassification(nn.Module):
         self.opt_G_rl.zero_grad()
         
         losses = {"e_loss": e_loss.data, "e_loss_anti": e_loss_anti.data, "g_loss": rl_loss.data}
-        return losses, predict, anti_predict, z, rewards, continuity_loss, sparsity_loss
+        return losses, predict, z
     
