@@ -34,8 +34,8 @@ train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt"
 os.environ["CUDA_VISIBLE_DEVICES"] = train_args.gpu_id
 
 
-# Train a model.
-if args.mode == "train":
+# Train or analyze a model.
+if args.mode in {"train", "analyze"}:
 
     # Set random seeds.
     import torch
@@ -44,10 +44,6 @@ if args.mode == "train":
     torch.manual_seed(args.random_seed)
     np.random.seed(args.random_seed)
     random.seed(args.random_seed)
-    
-    # Initialize checkpoints.
-    from utils.checkpointer import init_ckpt
-    init_ckpt(train_args.working_dir)
 
     # Load data.
     from datasets.dataset_loader import SentenceClassification
@@ -55,37 +51,41 @@ if args.mode == "train":
     train_args.num_labels = len(data.label_vocab)  # Number of labels.
     print("Data successfully loaded:", data)
 
-    # Initialize embeddings.
-    embeddings = data.initial_embedding(train_args.embedding_method,
-                                        train_args.embedding_dim,
-                                        train_args.embedding_dir)  # Load embeddings.
-    print("Embeddings successfully initialized:", embeddings.shape)
+    if args.mode == "train":  # Train a model.
 
-    # Initialize model.
-    from utils.formatter import format_class
-    Model = getattr(importlib.import_module("models." + train_args.model_name),
-                    format_class(train_args.model_name))
-    model = Model(embeddings, train_args)
-    print("Model successfully initialized:", model)
+        # Initialize checkpoints.
+        from utils.checkpointer import init_ckpt
+        init_ckpt(train_args.working_dir)
 
-    # Train model.
-    from runner.trainer import train
-    train(model, data, train_args)
-    print("Model successfully trained.")
+        # Initialize embeddings.
+        embeddings = data.initial_embedding(train_args.embedding_method,
+                                            train_args.embedding_dim,
+                                            train_args.embedding_dir)  # Load embeddings.
+        print("Embeddings successfully initialized:", embeddings.shape)
 
+        # Initialize model.
+        from utils.formatter import format_class
+        Model = getattr(importlib.import_module("models." + train_args.model_name),
+                        format_class(train_args.model_name))
+        model = Model(embeddings, train_args)
+        print("Model successfully initialized:", model)
 
-# Analyze a model. 
-elif args.mode == "analyze":
+        # Train model.
+        from runner.trainer import train
+        train(model, data, train_args)
+        print("Model successfully trained.")
 
-    # Get best checkpoint.
-    from utils.checkpointer import find_best_ckpt
-    ckpt_path = find_best_ckpt(train_args.working_dir)
-    print("Best checkpoint found:", ckpt_path)
+    elif args.mode == "analyze":  # Analyze a model.
 
-    # Analyze model.
-    analyzer = importlib.import_module("analyzers.analyze_" + train_args.model_name)
-    analyzer.analyze(ckpt_path)
-    print("Model successfully analyzed.")
+        # Get best checkpoint.
+        from utils.checkpointer import find_best_ckpt
+        ckpt_path = find_best_ckpt(train_args.working_dir)
+        print("Best checkpoint found:", ckpt_path)
+
+        # Analyze model.
+        analyzer = importlib.import_module("analyzers.analyze_" + train_args.model_name)
+        analyzer.analyze(ckpt_path, data)
+        print("Model successfully analyzed.")
 
 
 elif args.mode == "test":

@@ -39,7 +39,7 @@ class SentenceClassification(object):
         self._build_vocab()
 
         print("Converting token to indexes.")
-        self.idx_2_word = {val: key for key, val in self.word_vocab.items()}
+        self.idx2word = {val: key for key, val in self.word_vocab.items()}
         self.idx2label = {val: key for key, val in self.label_vocab.items()}
 
 
@@ -230,7 +230,7 @@ class SentenceClassification(object):
         """
         condition = z >= threshold
         for word_index, display_flag in zip(x, condition):
-            word = self.idx_2_word[word_index]
+            word = self.idx2word[word_index]
             if display_flag:
                 output_word = "%s %s%s" % (fg(1), word, attr(0))
                 print(output_word, end="")

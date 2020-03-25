@@ -84,7 +84,7 @@ class DataCleaner(object):
         df = df.dropna(subset={"comment"})
         df["split_y"] = df["split_y"].fillna("train")
         df = df.fillna("")
-        df["label"] = df["attack"].apply(lambda a: "1" if a >= self.score_threshold else "0")
+        df["label"] = df["attack"].apply(lambda a: "attack" if a >= self.score_threshold else "not_attack")
 
         # Save data.
         for split in ["train", "dev", "test"]:

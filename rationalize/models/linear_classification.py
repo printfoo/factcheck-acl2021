@@ -54,7 +54,8 @@ class LinearClassification(nn.Module):
                  each element in the seq_len is of 0/1 selecting a token or not.
                  (Not used in this model.)
         Outputs:
-            predict -- prediction of the label, shape (batch_size,).
+            predict -- prediction score of the label, shape (batch_size, |label|),
+                       each element at i is a predicted probability for label[i].
         """
 
         # Lookup embeddings of each token,
@@ -84,8 +85,8 @@ class LinearClassification(nn.Module):
                  (Not used in this model.)
         Outputs:
             losses -- a dict storing values of losses, only one loss in this model.
-            predict -- prediction of the label, shape (batch_size,),
-                       only one scalar per instance 0-|label| pointing to a label.
+            predict -- prediction score of the label, shape (batch_size, |label|),
+                       each element at i is a predicted probability for label[i].
             z -- the rationale for prediction, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
                  (Not used in this model.)
@@ -93,7 +94,6 @@ class LinearClassification(nn.Module):
         forward_tuple = self(x, m)
         if len(forward_tuple) == 1:  # If forward only returns a single value.
             predict = forward_tuple[0]  # (batch_size, |label|).
-        _, y_pred = torch.max(predict, dim=1)  # (batch_size,).
 
         # Get loss.
         pred_loss_ = self.pred_loss(predict, y)
