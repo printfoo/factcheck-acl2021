@@ -9,12 +9,10 @@ parser.add_argument("--mode", type=str, default="train",
                     help="Run mode, train or eval.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--data_name", type=str, default="personal_attacks",
+parser.add_argument("--data_name", type=str, default="factchecks",
                     help="Dataset name.")
 parser.add_argument("--config_name", type=str, default="linear",
                     help="Dataset name.")
-parser.add_argument("--output_dir", type=str, default="output",
-                    help="Output folder name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
 args, _ = parser.parse_known_args()
@@ -83,8 +81,9 @@ if args.mode in {"train", "analyze"}:
         print("Best checkpoint found:", ckpt_path)
 
         # Analyze model.
+        analyze_out = os.path.join(args.data_path, args.config_name + ".analyze")
         analyzer = importlib.import_module("analyzers.analyze_" + train_args.model_name)
-        analyzer.analyze(ckpt_path, data)
+        analyzer.analyze(ckpt_path, analyze_out, data)
         print("Model successfully analyzed.")
 
 
