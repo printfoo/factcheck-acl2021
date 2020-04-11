@@ -9,9 +9,9 @@ from torch.autograd import Variable
 from models.nn import CnnModel, RnnModel
 
 
-class Generator(nn.Module):
+class Tagger(nn.Module):
     """
-    Generator module, input sequence and output binary mask.
+    Tagger module, input sequence and output binary mask.
     Using CNN or RNN modules.
     """
 
@@ -29,7 +29,7 @@ class Generator(nn.Module):
             args.layer_num -- number of RNN layers.
             args.cell_type -- type of RNN cells, "GRU" or "LSTM".
         """
-        super(Generator, self).__init__()
+        super(Tagger, self).__init__()
         self.args = args
         if args.model_type == "CNN":
             self.generator_model = CnnModel(args, input_dim)

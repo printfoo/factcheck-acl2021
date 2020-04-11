@@ -10,7 +10,7 @@ import numpy as np
 from collections import deque
 
 from models.nn import RnnModel
-from models.generator import Generator
+from models.tagger import Tagger
 from models.classifier import Classifier
 
 
@@ -33,13 +33,13 @@ class RationaleClassification(nn.Module):
         self.vocab_size, self.embedding_dim = embeddings.shape
         self.embed_layer = self._create_embed_layer(embeddings)
 
-        self.E_model = Classifier(args)
-        self.E_anti_model = Classifier(args)
-        self.generator = Generator(args, self.embedding_dim)
+        self.classifier = Classifier(args)
+        self.anti_classifier = Classifier(args)
+        self.tagger = Tagger(args, self.embedding_dim)
 
-        self.opt_E = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_model.parameters()), lr=args.lr)
-        self.opt_E_anti = torch.optim.Adam(filter(lambda x: x.requires_grad, self.E_anti_model.parameters()), lr=args.lr)
-        self.opt_G_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.generator.parameters()), lr=args.lr*0.1)
+        self.opt_c = torch.optim.Adam(filter(lambda x: x.requires_grad, self.classifier.parameters()), lr=args.lr)
+        self.opt_anti_c = torch.optim.Adam(filter(lambda x: x.requires_grad, self.anti_classifier.parameters()), lr=args.lr)
+        self.opt_t_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.tagger.parameters()), lr=args.lr*0.1)
 
         self.exploration_rate = args.exploration_rate
         self.rationale_len = args.rationale_len
@@ -97,7 +97,7 @@ class RationaleClassification(nn.Module):
         """
         word_embeddings = self.embed_layer(x)  # (batch_size, length, embedding_dim).
 
-        z_scores_ = self.generator(word_embeddings, mask)  # (batch_size, length, 2).
+        z_scores_ = self.tagger(word_embeddings, mask)  # (batch_size, length, 2).
         z_scores_[:, :, 1] = z_scores_[:, :, 1] + (1 - mask) * self.NEG_INF
 
         z_probs_ = F.softmax(z_scores_, dim=-1)
@@ -105,8 +105,8 @@ class RationaleClassification(nn.Module):
 
         z, neg_log_probs = self._generate_rationales(z_probs_)
 
-        predict = self.E_model(word_embeddings, z, mask)
-        anti_predict = self.E_anti_model(word_embeddings, 1 - z, mask)
+        predict = self.classifier(word_embeddings, z, mask)
+        anti_predict = self.anti_classifier(word_embeddings, 1 - z, mask)
 
         return predict, anti_predict, z, neg_log_probs
     
@@ -191,8 +191,8 @@ class RationaleClassification(nn.Module):
 
         predict, anti_predict, z, neg_log_probs = self.forward(x, mask)
         
-        e_loss_anti = torch.mean(self.loss_func(anti_predict, label))        
-        e_loss = torch.mean(self.loss_func(predict, label))
+        loss_anti_c = torch.mean(self.loss_func(anti_predict, label))        
+        loss_c = torch.mean(self.loss_func(predict, label))
         loss_tuple = self._get_loss(predict, anti_predict, z, neg_log_probs, baseline, mask, label)
         rl_loss, rewards, continuity_loss, sparsity_loss = loss_tuple
         
@@ -200,20 +200,20 @@ class RationaleClassification(nn.Module):
         self.z_history_rewards.append(z_batch_reward)
 
         # Backprop loss to predictor E.
-        e_loss_anti.backward()
-        self.opt_E_anti.step()
-        self.opt_E_anti.zero_grad()
+        loss_anti_c.backward()
+        self.opt_anti_c.step()
+        self.opt_anti_c.zero_grad()
         
         # Backprop loss to predictor anti_E.
-        e_loss.backward()
-        self.opt_E.step()
-        self.opt_E.zero_grad()
+        loss_c.backward()
+        self.opt_c.step()
+        self.opt_c.zero_grad()
 
         # Backprop loss to generator G.
         rl_loss.backward()
-        self.opt_G_rl.step()
-        self.opt_G_rl.zero_grad()
+        self.opt_t_rl.step()
+        self.opt_t_rl.zero_grad()
         
-        losses = {"e_loss": e_loss.data, "e_loss_anti": e_loss_anti.data, "g_loss": rl_loss.data}
+        losses = {"loss_c": loss_c.data, "loss_anti_c": loss_anti_c.data, "loss_t": rl_loss.data}
         return losses, predict, z
     
