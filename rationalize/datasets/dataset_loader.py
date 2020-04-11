@@ -230,7 +230,7 @@ class SentenceClassification(object):
         """
         condition = z >= threshold
         for word_index, display_flag in zip(x, condition):
-            word = self.idx2word[word_index]
+            word = self.idx2word[word_index.item()]
             if display_flag:
                 output_word = "%s %s%s" % (fg(1), word, attr(0))
                 print(output_word, end="")

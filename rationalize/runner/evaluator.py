@@ -31,8 +31,7 @@ def evaluate(model, data, args, set_name):
 
         # Get predictions.
         forward_tuple = model(x, m)
-        if len(forward_tuple) == 1:
-            predict = forward_tuple[0]
+        predict = forward_tuple[0]
 
         # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)

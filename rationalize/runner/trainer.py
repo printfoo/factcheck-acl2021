@@ -48,11 +48,11 @@ def train(model, data, args):
         if args.display_iteration and i % args.display_iteration == 0:
             y_ = y[2]
             pred_ = y_pred.data[2]
-            x_ = m[2,:]
+            x_ = x[2,:]
             z_ = z.data[2,:]
             z_b = torch.zeros_like(z)
             z_b_ = z_b.data[2,:]
-            print("gold label:", data.idx2label[y_], "pred label:", data.idx2label[pred_.item()])
+            print("gold label:", data.idx2label[y_.item()], "pred label:", data.idx2label[pred_.item()])
             data.display_example(x_, z_)
 
         # Eval every args.eval_iteration.

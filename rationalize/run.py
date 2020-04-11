@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="factchecks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="linear",
+parser.add_argument("--config_name", type=str, default="rationale_baseline",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
@@ -96,10 +96,11 @@ elif args.mode == "test":
 
 elif args.mode == "purge":
 
-    # Perge all checkpoints.
+    # Purge all checkpoints and analyses.
     from utils.checkpointer import purge
     purge(os.path.join(args.data_path, args.config_name + ".ckpt"))
-    print("All checkpoints purged.")
+    purge(os.path.join(args.data_path, args.config_name + ".analyze"))
+    print("All checkpoints and analyses purged.")
 
 
 else:
