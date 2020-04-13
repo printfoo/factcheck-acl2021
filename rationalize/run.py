@@ -60,7 +60,7 @@ if args.mode in {"train", "analyze"}:
                                             train_args.embedding_dim,
                                             train_args.embedding_dir)  # Load embeddings.
         print("Embeddings successfully initialized:", embeddings.shape)
-
+        
         # Initialize model.
         from utils.formatter import format_class
         Model = getattr(importlib.import_module("models." + train_args.model_name),
@@ -89,9 +89,15 @@ if args.mode in {"train", "analyze"}:
 
 elif args.mode == "test":
 
+    # Test model.
+    test_model = getattr(importlib.import_module("models." + train_args.model_name),
+                         "test_" + train_args.model_name)
+    test_model(train_args)
+    print("Model successfully tested:", train_args.model_name)
+    
     # Test data.
-    from datasets.dataset_loader import test_data
-    test_data(args.data_path, train_args)
+    # from datasets.dataset_loader import test_data
+    # test_data(args.data_path, train_args)
 
 
 elif args.mode == "purge":

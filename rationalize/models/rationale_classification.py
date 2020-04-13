@@ -29,29 +29,43 @@ class RationaleClassification(nn.Module):
         self.lambda_sparsity = args.lambda_sparsity
         self.lambda_continuity = args.lambda_continuity
         self.lambda_anti = args.lambda_anti
-
-        self.vocab_size, self.embedding_dim = embeddings.shape
-        self.embed_layer = self._create_embed_layer(embeddings)
-
-        self.classifier = Classifier(args)
-        self.anti_classifier = Classifier(args)
-        self.tagger = Tagger(args, self.embedding_dim)
-
-        self.opt_c = torch.optim.Adam(filter(lambda x: x.requires_grad, self.classifier.parameters()), lr=args.lr)
-        self.opt_anti_c = torch.optim.Adam(filter(lambda x: x.requires_grad, self.anti_classifier.parameters()), lr=args.lr)
-        self.opt_t_rl = torch.optim.Adam(filter(lambda x: x.requires_grad, self.tagger.parameters()), lr=args.lr*0.1)
-
         self.exploration_rate = args.exploration_rate
         self.rationale_len = args.rationale_len
         self.rationale_num = args.rationale_num
+        self.vocab_size, self.embedding_dim = embeddings.shape
 
+        # Initialize modules.
+        self.embed_layer = self._create_embed_layer(embeddings)
+        self.classifier = Classifier(args)
+        self.anti_classifier = Classifier(args)
+        self.tagger = Tagger(args, self.embedding_dim)
+        self.loss_func = nn.CrossEntropyLoss(reduce=False)
+
+        # Initialize optimizers.
+        self.opt_c = torch.optim.Adam(filter(lambda x: x.requires_grad, 
+                                             self.classifier.parameters()),
+                                      lr=args.lr)
+        self.opt_anti_c = torch.optim.Adam(filter(lambda x: x.requires_grad,
+                                                  self.anti_classifier.parameters()),
+                                           lr=args.lr)
+        self.opt_t_rl = torch.optim.Adam(filter(lambda x: x.requires_grad,
+                                                self.tagger.parameters()),
+                                         lr=args.lr * 0.1)
+
+        # Initialize reward queue for reinforce loss.
         self.z_history_rewards = deque(maxlen=200)
         self.z_history_rewards.append(0.)
 
-        self.loss_func = nn.CrossEntropyLoss(reduce=False)
-
 
     def _create_embed_layer(self, embeddings):
+        """
+        Create a lookup layer for embeddings.
+        Input:
+            embeddings -- embeddings of tokens, shape (|vocab|, embedding_dim). 
+        Output:
+            embed_layer -- a lookup layer for embeddings.
+                           inputs token' ID and returns token's embedding.
+        """
         embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
         embed_layer.weight.data = torch.from_numpy(embeddings)
         embed_layer.weight.requires_grad = bool(self.args.fine_tuning)
@@ -86,27 +100,34 @@ class RationaleClassification(nn.Module):
         return z, neg_log_probs
 
 
-    def forward(self, x, mask):
+    def forward(self, x, m):
         """
         Inputs:
-            x -- torch Variable in shape of (batch_size, length).
-            mask -- torch Variable in shape of (batch_size, length).
+            x -- Variable() of input x, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0-|vocab| pointing to a token.
+            m -- Variable() of mask m, shape (batch_size, seq_len).
+                 each element in the seq_len is of 0/1 selecting a token or not.
+                 (Not used in this model.)
         Outputs:
-            predict -- (batch_size, num_label).
+            predict -- prediction score of the label, shape (batch_size, |label|),
+                       each element at i is a predicted probability for label[i].
             z -- rationale (batch_size, length).
         """
-        word_embeddings = self.embed_layer(x)  # (batch_size, length, embedding_dim).
 
-        z_scores_ = self.tagger(word_embeddings, mask)  # (batch_size, length, 2).
-        z_scores_[:, :, 1] = z_scores_[:, :, 1] + (1 - mask) * self.NEG_INF
+        # Lookup embeddings of each token,
+        # (batch_size, seq_len) -> (batch_size, seq_len, embedding_dim).
+        word_embeddings = self.embed_layer(x)
+
+        z_scores_ = self.tagger(word_embeddings, m)  # (batch_size, length, 2).
+        z_scores_[:, :, 1] = z_scores_[:, :, 1] + (1 - m) * self.NEG_INF
 
         z_probs_ = F.softmax(z_scores_, dim=-1)
-        z_probs_ = (mask.unsqueeze(-1) * ( (1 - self.exploration_rate) * z_probs_ + self.exploration_rate / z_probs_.size(-1) ) ) + ((1 - mask.unsqueeze(-1)) * z_probs_)
+        z_probs_ = (m.unsqueeze(-1) * ( (1 - self.exploration_rate) * z_probs_ + self.exploration_rate / z_probs_.size(-1) ) ) + ((1 - m.unsqueeze(-1)) * z_probs_)
 
         z, neg_log_probs = self._generate_rationales(z_probs_)
 
-        predict = self.classifier(word_embeddings, z, mask)
-        anti_predict = self.anti_classifier(word_embeddings, 1 - z, mask)
+        predict = self.classifier(word_embeddings, z, m)
+        anti_predict = self.anti_classifier(word_embeddings, 1 - z, m)
 
         return predict, anti_predict, z, neg_log_probs
     
@@ -216,4 +237,9 @@ class RationaleClassification(nn.Module):
         
         losses = {"loss_c": loss_c.data, "loss_anti_c": loss_anti_c.data, "loss_t": rl_loss.data}
         return losses, predict, z
-    
+
+
+def test_rationale_classification(args):
+    embeddings = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]).astype(np.float32)
+    args.num_labels = 2
+    model = RationaleClassification(embeddings, args)
