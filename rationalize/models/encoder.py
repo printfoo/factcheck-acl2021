@@ -40,7 +40,7 @@ class RnnEncoder(nn.Module):
 
         # Transpose embeddings,
         # (batch_size, seq_len, embedding_dim) -> (seq_len, batch_size, embedding_dim).
-        e_T = e.transpose(0, 1)
+        e_T = e.permute(1, 0, 2)
         
         # Pad sequence if masked.
         if m is not None:
@@ -75,30 +75,37 @@ class CnnEncoder(nn.Module):
         args.embedding_dim -- dimension of word embeddings.
         """
         super(CnnEncoder, self).__init__()
-        self.conv_layers = nn.Sequential()
+        self.cnn = nn.Sequential()
         for i in range(args.layer_num):
             if i == 0:
                 input_dim = args.embedding_dim
             else:
                 input_dim = args.hidden_dim
-            self.conv_layers.add_module("conv_layer{:d}".format(i),
-                                        nn.Conv1d(in_channels=input_dim,
-                                                  out_channels=args.hidden_dim,
-                                                  kernel_size=args.kernel_size,
-                                                  padding=(args.kernel_size-1)/2))
-            self.conv_layers.add_module("relu{:d}".format(i), nn.ReLU())
+            self.cnn.add_module("conv_layer{:d}".format(i),
+                                nn.Conv1d(in_channels=input_dim,
+                                          out_channels=args.hidden_dim,
+                                          kernel_size=args.kernel_size,
+                                          padding=(args.kernel_size-1)//2))
+            self.cnn.add_module("relu{:d}".format(i), nn.ReLU())
 
 
-    def forward(self, embeddings):
+    def forward(self, e, m=None):
         """
-        Given input embeddings in shape of (batch_size, sequence_length, embedding_dim) generate a 
-        sentence embedding tensor (batch_size, sequence_length, hidden_dim).
         Inputs:
-            embeddings -- sequence of word embeddings, (batch_size, sequence_length, embedding_dim).
+            e -- input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
+                 each element in the seq_len is a word embedding of embedding_dim.
+            m -- mask of the input sequence, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
-            hiddens -- sentence embedding tensor, (batch_size, hidden_dim, sequence_length).
+            hiddens -- hidden states of the encoder, shape (batch_size, hidden_dim, seq_len).
         """
-        embeddings_ = embeddings.transpose(1, 2)  # (batch_size, embedding_dim, sequence_length)
-        hiddens = self.conv_layers(embeddings_)
-        print(hiddens)
+        
+        # Transpose embeddings,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, embedding_dim, seq_len).
+        e_T = e.permute(0, 2, 1)
+
+        # Pass embeddings through a CNN layer,
+        # (batch_size, embedding_dim, seq_len) -> (batch_size, hidden_dim, seq_len).
+        hiddens = self.cnn(e_T)
+
         return hiddens

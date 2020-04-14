@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from models.encoder import RnnEncoder
+from models.encoder import RnnEncoder, CnnEncoder
 
 
 class Classifier(nn.Module):
@@ -19,13 +19,16 @@ class Classifier(nn.Module):
         Inputs:
             args.num_labels -- number of labels.
             args.hidden_dim -- dimension of hidden states.
-            args.layer_num -- number of RNN layers.
-            args.cell_type -- type of RNN cells, "GRU" or "LSTM".
+            args.model_type -- type of model, RNN or CNN.
+            args.layer_num -- number of layers.
+            args.cell_type -- type of cell GRU or LSTM (RNN only).
+            args.kernel_size -- kernel size of the conv1d (CNN only).
             args.embedding_dim -- dimension of word embeddings.
         """
         super(Classifier, self).__init__()
         self.NEG_INF = -1.0e6
-        self.encoder = RnnEncoder(args)
+        encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder}
+        self.encoder = encoders[args.model_type](args)
         self.predictor = nn.Linear(args.hidden_dim, args.num_labels)
 
 
