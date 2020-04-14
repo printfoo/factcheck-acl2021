@@ -6,49 +6,6 @@ import torch.nn as nn
 from torch.autograd import Variable  
 
 
-class CnnModel(nn.Module):
-    """
-    Basic CNN module, input embedding and output hidden states.
-    """
-
-    def __init__(self, args):
-        """
-        args.hidden_dim -- dimension of filters.
-        args.embedding_dim -- dimension of word embeddings.
-        args.kernel_size -- kernel size of the conv1d.
-        args.layer_num -- number of CNN layers.
-        """
-        super(CnnModel, self).__init__()
-
-        self.args = args
-        if args.kernel_size % 2 == 0:
-            raise ValueError("args.kernel_size should be an odd number.")
-            
-        self.conv_layers = nn.Sequential()
-        for i in range(args.layer_num):
-            if i == 0:
-                input_dim = args.embedding_dim
-            else:
-                input_dim = args.hidden_dim
-            self.conv_layers.add_module("conv_layer{:d}".format(i), 
-                                        nn.Conv1d(in_channels=input_dim, out_channels=args.hidden_dim,
-                                                  kernel_size=args.kernel_size, padding=(args.kernel_size-1)/2))
-            self.conv_layers.add_module("relu{:d}".format(i), nn.ReLU())
-        
-    def forward(self, embeddings):
-        """
-        Given input embeddings in shape of (batch_size, sequence_length, embedding_dim) generate a 
-        sentence embedding tensor (batch_size, sequence_length, hidden_dim).
-        Inputs:
-            embeddings -- sequence of word embeddings, (batch_size, sequence_length, embedding_dim).
-        Outputs:
-            hiddens -- sentence embedding tensor, (batch_size, hidden_dim, sequence_length).
-        """
-        embeddings_ = embeddings.transpose(1, 2)  # (batch_size, embedding_dim, sequence_length)
-        hiddens = self.conv_layers(embeddings_)
-        return hiddens
-
-
 class RnnModel(nn.Module):
     """
     Basic RNN module, input embedding and output hidden states.

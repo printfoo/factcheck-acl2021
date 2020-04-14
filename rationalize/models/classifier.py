@@ -6,13 +6,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from models.nn import CnnModel, RnnModel
+from models.nn import RnnModel
 
 
 class Classifier(nn.Module):
     """
     Classifier module, input sequence and binary mask, output label.
-    Using CNN or RNN modules.
     """
 
     def __init__(self, args):
