@@ -22,42 +22,36 @@ class RationaleClassification(nn.Module):
 
     def __init__(self, embeddings, args):
         super(RationaleClassification, self).__init__()
-        self.NEG_INF = -1.0e6
-        self.args = args
 
+        # Initialize parameters.
+        self.NEG_INF = -1.0e6
         self.use_cuda = args.cuda
         self.lambda_sparsity = args.lambda_sparsity
         self.lambda_continuity = args.lambda_continuity
         self.lambda_anti = args.lambda_anti
-        self.exploration_rate = args.exploration_rate
         self.rationale_len = args.rationale_len
         self.rationale_num = args.rationale_num
         self.vocab_size, self.embedding_dim = embeddings.shape
 
         # Initialize modules.
-        self.embed_layer = self._create_embed_layer(embeddings)
+        self.embed_layer = self._create_embed_layer(embeddings, bool(args.fine_tuning))
         self.classifier = Classifier(args)
         self.anti_classifier = Classifier(args)
         self.tagger = Tagger(args, self.embedding_dim)
-        self.loss_func = nn.CrossEntropyLoss(reduce=False)
+        self.loss_func = nn.CrossEntropyLoss(reduction="none")
 
         # Initialize optimizers.
-        self.opt_c = torch.optim.Adam(filter(lambda x: x.requires_grad, 
-                                             self.classifier.parameters()),
-                                      lr=args.lr)
-        self.opt_anti_c = torch.optim.Adam(filter(lambda x: x.requires_grad,
-                                                  self.anti_classifier.parameters()),
-                                           lr=args.lr)
-        self.opt_t_rl = torch.optim.Adam(filter(lambda x: x.requires_grad,
-                                                self.tagger.parameters()),
-                                         lr=args.lr * 0.1)
+        p_grad = lambda module: filter(lambda _: _.requires_grad, module.parameters())
+        self.opt_c = torch.optim.Adam(p_grad(self.classifier), lr=args.lr)
+        self.opt_anti_c = torch.optim.Adam(p_grad(self.anti_classifier), lr=args.lr)
+        self.opt_t_rl = torch.optim.Adam(p_grad(self.tagger), lr=args.lr*0.1)
 
         # Initialize reward queue for reinforce loss.
         self.z_history_rewards = deque(maxlen=200)
         self.z_history_rewards.append(0.)
 
 
-    def _create_embed_layer(self, embeddings):
+    def _create_embed_layer(self, embeddings, fine_tuning=False):
         """
         Create a lookup layer for embeddings.
         Input:
@@ -68,36 +62,39 @@ class RationaleClassification(nn.Module):
         """
         embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
         embed_layer.weight.data = torch.from_numpy(embeddings)
-        embed_layer.weight.requires_grad = bool(self.args.fine_tuning)
+        embed_layer.weight.requires_grad = fine_tuning
         return embed_layer
 
 
-    def _generate_rationales(self, z_prob_):
+    def _generate_rationales(self, z_probs):
         """
         Input:
-            z_prob_ -- (num_rows, length, 2).
+            z_prob_ -- probability of selecting rationale, shape (batch_size, seq_len, 2),
+                       each element is a 0-1 probability of selecting a token or not.
         Output:
-            z -- (num_rows, length).
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
         """
-        z_prob__ = z_prob_.view(-1, 2)  # (num_rows*length, 2).
 
-        sampler = torch.distributions.Categorical(z_prob__)  # Sample actions.
-        if self.training:
-            z_ = sampler.sample()  # (num_rows*p_length,).
-        else:
-            z_ = torch.max(z_prob__, dim=-1)[1]
+        # Reshape z_probs by concatenating all batches,
+        # (batch_size, seq_len, 2) -> (batch_size * seq_len, 2)
+        z_probs_all = z_probs.view(-1, 2)
 
-        z = z_.view(z_prob_.size(0), z_prob_.size(1))  # (num_rows, length).
-        
-        if self.use_cuda == True:
-            z = z.type(torch.cuda.FloatTensor)
-        else:
-            z = z.type(torch.FloatTensor)
+        # Create a categorical distribution parameterized by concatenated probs.
+        sampler = torch.distributions.Categorical(z_probs_all)
 
-        neg_log_probs_ = -sampler.log_prob(z_)  # (num_rows*length,).
-        neg_log_probs = neg_log_probs_.view(z_prob_.size(0), z_prob_.size(1))  # (num_rows, length).
-        
-        return z, neg_log_probs
+        if self.training:  # If train, sample rationale from the distribution.
+            z_all = sampler.sample()  # (batch_size * seq_len).
+        else:  # If eval, use max prob as rationale.
+            z_all = torch.max(z_probs_all, dim=-1)[1]  # (batch_size * seq_len).
+        neg_log_probs_all = -sampler.log_prob(z_all)  # (batch_size * seq_len).
+
+        # Recover concatenated rationales to each batch,
+        # (batch_size * seq_len) -> (batch_size, seq_len).
+        z = z_all.view(z_probs.size(0), z_probs.size(1))
+        neg_log_probs = neg_log_probs_all.view(z_probs.size(0), z_probs.size(1))
+
+        return z.float(), neg_log_probs
 
 
     def forward(self, x, m):
@@ -107,26 +104,40 @@ class RationaleClassification(nn.Module):
                  each element in the seq_len is of 0-|vocab| pointing to a token.
             m -- Variable() of mask m, shape (batch_size, seq_len).
                  each element in the seq_len is of 0/1 selecting a token or not.
-                 (Not used in this model.)
         Outputs:
-            predict -- prediction score of the label, shape (batch_size, |label|),
+            predict -- prediction score of classifier, shape (batch_size, |label|),
                        each element at i is a predicted probability for label[i].
-            z -- rationale (batch_size, length).
+            anti_predict -- prediction score of anti classifier, shape (batch_size, |label|),
+                            each element at i is a predicted probability for label[i].
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+            neg_log_probs -- negative log probability, shape (batch_size, seq_len).
         """
 
         # Lookup embeddings of each token,
         # (batch_size, seq_len) -> (batch_size, seq_len, embedding_dim).
         word_embeddings = self.embed_layer(x)
 
-        z_scores_ = self.tagger(word_embeddings, m)  # (batch_size, length, 2).
-        z_scores_[:, :, 1] = z_scores_[:, :, 1] + (1 - m) * self.NEG_INF
+        # Pass embeddings through the tagger module,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, 2).
+        z_scores = self.tagger(word_embeddings, m)
+        
+        # Replace (batch_size, seq_len, 1) with -inf.
+        z_scores[:, :, 1] = z_scores[:, :, 1] + (1 - m) * self.NEG_INF
 
-        z_probs_ = F.softmax(z_scores_, dim=-1)
-        z_probs_ = (m.unsqueeze(-1) * ( (1 - self.exploration_rate) * z_probs_ + self.exploration_rate / z_probs_.size(-1) ) ) + ((1 - m.unsqueeze(-1)) * z_probs_)
+        # Run a softmax for valid probs (batch_size, seq_len, 0) + (batch_size, seq_len, 1) = 1.
+        z_probs = F.softmax(z_scores, dim=-1)
 
-        z, neg_log_probs = self._generate_rationales(z_probs_)
+        # Generate rationale and negative log probs,
+        # (batch_size, seq_len, 2) -> (batch_size, seq_len)
+        z, neg_log_probs = self._generate_rationales(z_probs)
 
+        # Prediction of classifier,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
         predict = self.classifier(word_embeddings, z, m)
+        
+        # Prediction of anti classifier,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
         anti_predict = self.anti_classifier(word_embeddings, 1 - z, m)
 
         return predict, anti_predict, z, neg_log_probs
@@ -239,7 +250,25 @@ class RationaleClassification(nn.Module):
         return losses, predict, z
 
 
+# Test for RationaleClassification.
 def test_rationale_classification(args):
+
     embeddings = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]).astype(np.float32)
     args.num_labels = 2
+    args.embedding_dim = 3
+
     model = RationaleClassification(embeddings, args)
+    if args.cuda:
+        model.cuda()
+    
+    model.train()
+    x = Variable(torch.tensor([[1, 3, 3, 2], [2, 1, 3, 0], [3, 1, 2, 0]]))  # (batch_size, seq_len).
+    y = Variable(torch.tensor([1, 0, 1]))  # (batch_size,).
+    m = Variable(torch.tensor([[1, 1, 1, 1], [1, 1, 1, 0], [1, 1, 1, 0]]))  # (batch_size, seq_len).
+    if args.cuda:
+        x = x.cuda()
+        y = y.cuda()
+        m = m.cuda()
+
+    losses, predict, z = model.train_one_step(x, y, m)
+    print(losses, predict, z)
