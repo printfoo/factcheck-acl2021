@@ -14,14 +14,14 @@ from models.tagger import Tagger
 from models.classifier import Classifier
 
 
-class RationaleClassification(nn.Module):
+class Rationalizer(nn.Module):
     """
-    Rationale classification model.
+    Rationalizer model.
     Using model.Tagger and model.Classifier modules.
     """
 
     def __init__(self, embeddings, args):
-        super(RationaleClassification, self).__init__()
+        super(Rationalizer, self).__init__()
 
         # Initialize parameters.
         self.use_cuda = args.cuda
@@ -36,7 +36,7 @@ class RationaleClassification(nn.Module):
         self.embed_layer = self._create_embed_layer(embeddings, bool(args.fine_tuning))
         self.classifier = Classifier(args)
         self.anti_classifier = Classifier(args)
-        self.tagger = Tagger(args, self.embedding_dim)
+        self.tagger = Tagger(args)
         self.loss_func = nn.CrossEntropyLoss(reduction="none")
 
         # Initialize optimizers.
@@ -208,15 +208,15 @@ class RationaleClassification(nn.Module):
         return losses, predict, z
 
 
-# Test for RationaleClassification.
-def test_rationale_classification(args):
+# Test for Rationalizer.
+def test_rationalizer(args):
 
     embeddings = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]).astype(np.float32)
     args.num_labels = 2
     args.embedding_dim = 3
     args.hidden_dim = 6
 
-    model = RationaleClassification(embeddings, args)
+    model = Rationalizer(embeddings, args)
     if args.cuda:
         model.cuda()
     

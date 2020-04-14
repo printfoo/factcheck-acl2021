@@ -7,13 +7,13 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
-class BowClassification(nn.Module):
+class Linear(nn.Module):
     """
-    Bag of words classification model.
+    Bag of words linear classification model.
     """
 
     def __init__(self, embeddings, args):
-        super(BowClassification, self).__init__()
+        super(Linear, self).__init__()
         self.args = args
         self.use_cuda = args.cuda
         self.vocab_size, self.embedding_dim = embeddings.shape

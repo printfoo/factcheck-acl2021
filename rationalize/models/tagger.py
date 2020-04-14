@@ -14,18 +14,18 @@ class Tagger(nn.Module):
     Tagger module, input sequence and output binary mask.
     """
 
-    def __init__(self, args, embedding_dim):
+    def __init__(self, args):
         """
         Inputs:
             args.z_dim -- dimension of rationale, always 2.
             args.hidden_dim -- dimension of hidden states.
             args.layer_num -- number of RNN layers.
             args.cell_type -- type of RNN cells, "GRU" or "LSTM".
-            embedding_dim -- dimension of word embeddings.
+            args.embedding_dim -- dimension of word embeddings.
         """
         super(Tagger, self).__init__()
         self.NEG_INF = -1.0e6
-        self.encode_layer = RnnModel(args, embedding_dim)
+        self.encode_layer = RnnModel(args, args.embedding_dim)
         self.output_layer = nn.Linear(args.hidden_dim, args.z_dim)
 
 
