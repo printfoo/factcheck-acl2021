@@ -19,26 +19,43 @@ class Classifier(nn.Module):
         Inputs:
             args.num_labels -- number of labels.
             args.hidden_dim -- dimension of hidden states.
+            args.layer_num -- number of RNN layers.
+            args.cell_type -- type of RNN cells, "GRU" or "LSTM".
             args.embedding_dim -- dimension of word embeddings.
         """
         super(Classifier, self).__init__()
         self.NEG_INF = -1.0e6
-        self.encoder = RnnModel(args, args.embedding_dim)
-        self.predictor = nn.Linear(args.hidden_dim, args.num_labels)
+        self.encode_layer = RnnModel(args, args.embedding_dim)
+        self.output_layer = nn.Linear(args.hidden_dim, args.num_labels)
 
-    def forward(self, word_embeddings, z, mask):
+    def forward(self, e, z, m):
         """
         Inputs:
-            word_embeddings -- torch Variable in shape of (batch_size, length, embed_dim)
-            z -- rationale (batch_size, length)
-            mask -- torch Variable in shape of (batch_size, length)
+            e -- Input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
+                 each element in the seq_len is a word embedding of embedding_dim.
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+            m -- Mask of the input sequence, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
-            predict -- (batch_size, num_label)
+            predict -- prediction score of classifier, shape (batch_size, |label|),
+                       each element at i is a predicted probability for label[i].
         """
-        masked_input = word_embeddings * z.unsqueeze(-1)
-        hiddens = self.encoder(masked_input, mask)
 
-        max_hidden = torch.max(hiddens + (1 - mask * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
-        
-        predict = self.predictor(max_hidden)
+        # Get rationales by masking input sequence with rationale selection z.
+        rationales = e * z.unsqueeze(-1)
+
+        # Pass rationales through an RNN module and get hidden states,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, hidden_dim, seq_len).
+        hiddens = self.encode_layer(rationales, m)
+
+        # Get max hidden of a sequence from hiddens,
+        # Here hiddens are masked by rationale selection z again,
+        # (batch_size, hidden_dim, seq_len) -> (batch_size, hidden_dim)
+        max_hidden = torch.max(hiddens + (1 - m * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
+
+        # Pass max hidden to an output linear layer and get prediction,
+        # (batch_size, hidden_dim) -> (batch_size, |label|).
+        predict = self.output_layer(max_hidden)
+
         return predict
