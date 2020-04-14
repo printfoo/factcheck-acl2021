@@ -9,7 +9,6 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 
-from models.nn import RnnModel
 from models.tagger import Tagger
 from models.classifier import Classifier
 

@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from models.nn import RnnModel
+from models.encoder import RnnEncoder
 
 
 class Classifier(nn.Module):
@@ -25,17 +25,18 @@ class Classifier(nn.Module):
         """
         super(Classifier, self).__init__()
         self.NEG_INF = -1.0e6
-        self.encode_layer = RnnModel(args, args.embedding_dim)
-        self.output_layer = nn.Linear(args.hidden_dim, args.num_labels)
+        self.encoder = RnnEncoder(args)
+        self.predictor = nn.Linear(args.hidden_dim, args.num_labels)
+
 
     def forward(self, e, z, m):
         """
         Inputs:
-            e -- Input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
+            e -- input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
                  each element in the seq_len is a word embedding of embedding_dim.
             z -- selected rationale, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
-            m -- Mask of the input sequence, shape (batch_size, seq_len),
+            m -- mask of the input sequence, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
             predict -- prediction score of classifier, shape (batch_size, |label|),
@@ -45,9 +46,9 @@ class Classifier(nn.Module):
         # Get rationales by masking input sequence with rationale selection z.
         rationales = e * z.unsqueeze(-1)
 
-        # Pass rationales through an RNN module and get hidden states,
+        # Pass rationales through an encoder and get hidden states,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, hidden_dim, seq_len).
-        hiddens = self.encode_layer(rationales, m)
+        hiddens = self.encoder(rationales, m)
 
         # Get max hidden of a sequence from hiddens,
         # Here hiddens are masked by rationale selection z again,
@@ -56,6 +57,6 @@ class Classifier(nn.Module):
 
         # Pass max hidden to an output linear layer and get prediction,
         # (batch_size, hidden_dim) -> (batch_size, |label|).
-        predict = self.output_layer(max_hidden)
+        predict = self.predictor(max_hidden)
 
         return predict

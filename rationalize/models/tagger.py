@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from models.nn import RnnModel
+from models.encoder import RnnEncoder
 
 
 class Tagger(nn.Module):
@@ -25,8 +25,8 @@ class Tagger(nn.Module):
         """
         super(Tagger, self).__init__()
         self.NEG_INF = -1.0e6
-        self.encode_layer = RnnModel(args, args.embedding_dim)
-        self.output_layer = nn.Linear(args.hidden_dim, args.z_dim)
+        self.encoder = RnnEncoder(args)
+        self.predictor = nn.Linear(args.hidden_dim, args.z_dim)
 
 
     def _binarize_probs(self, z_probs):
@@ -65,9 +65,9 @@ class Tagger(nn.Module):
     def forward(self, e, m):
         """
         Inputs:
-            e -- Input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
+            e -- input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
                  each element in the seq_len is a word embedding of embedding_dim.
-            m -- Mask of the input sequence, shape (batch_size, seq_len),
+            m -- mask of the input sequence, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
             z -- selected rationale, shape (batch_size, seq_len),
@@ -75,13 +75,13 @@ class Tagger(nn.Module):
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
         """
 
-        # Pass embeddings through an RNN module and get hidden states,
+        # Pass embeddings through an encoder and get hidden states,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, hidden_dim).
-        hiddens = self.encode_layer(e, m).transpose(1, 2).contiguous()
+        hiddens = self.encoder(e, m).permute(0, 2, 1).contiguous()
 
         # Pass hidden states to an output linear layer and get rationale scores,
         # (batch_size, seq_len, hidden_dim) -> (batch_size, seq_len, 2).
-        z_scores = self.output_layer(hiddens)
+        z_scores = self.predictor(hiddens)
 
         # Replace (batch_size, seq_len, 1) with -inf.
         z_scores[:, :, 1] = z_scores[:, :, 1] + (1 - m) * self.NEG_INF
