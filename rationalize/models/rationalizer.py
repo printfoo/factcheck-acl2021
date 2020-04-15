@@ -40,11 +40,11 @@ class Rationalizer(nn.Module):
 
         # Initialize optimizers.
         p_grad = lambda module: filter(lambda _: _.requires_grad, module.parameters())
-        self.opt_c = torch.optim.Adam(p_grad(self.classifier), lr=args.lr)
-        self.opt_anti_c = torch.optim.Adam(p_grad(self.anti_classifier), lr=args.lr)
-        self.opt_t_rl = torch.optim.Adam(p_grad(self.tagger), lr=args.lr*0.1)
+        self.opt_classifier = torch.optim.Adam(p_grad(self.classifier), lr=args.lr)
+        self.opt_anti_classifier = torch.optim.Adam(p_grad(self.anti_classifier), lr=args.lr)
+        self.opt_tagger = torch.optim.Adam(p_grad(self.tagger), lr=args.lr*0.1)
 
-        # Initialize reward queue for reinforce loss.
+        # Initialize reward queue for reinforce-style loss.
         self.z_history_rewards = deque(maxlen=200)
         self.z_history_rewards.append(0.)
 
@@ -66,6 +66,7 @@ class Rationalizer(nn.Module):
 
     def forward(self, x, m):
         """
+        Forward model from x and m and get rationales, predictions, etc.
         Inputs:
             x -- Variable() of input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
@@ -100,7 +101,32 @@ class Rationalizer(nn.Module):
         return predict, anti_predict, z, neg_log_probs
     
 
-    def _regularization_loss_batch(self, z, rationale_len, rationale_num, mask=None):
+    def _get_tagger_loss(self, accuracy_c, accuracy_anti_c, loss_continuity, loss_sparsity, z, neg_log_probs, m):
+
+
+        # Baseline reward for reinforce-style learning, average of history.
+        rl_base = Variable(torch.tensor(np.mean(self.z_history_rewards)))
+        if self.use_cuda:
+            rl_base = rl_base.cuda()
+
+        rewards = accuracy_c - accuracy_anti_c * self.lambda_anti - loss_continuity * self.lambda_continuity - loss_sparsity * self.lambda_sparsity  # batch RL reward.
+
+        advantages = rewards - rl_base  # (batch_size,).
+        advantages = Variable(advantages.data, requires_grad=False)
+        if self.use_cuda:
+            advantages = advantages.cuda()
+
+        advantages_expand_ = advantages.unsqueeze(-1).expand_as(neg_log_probs)  # (batch_size, q_length).
+        loss_rl = torch.sum(neg_log_probs * advantages_expand_ * m)
+
+        # Update reinforce-style loss of this batch to the history reward queue.
+        z_batch_reward = torch.mean(rewards).item()
+        self.z_history_rewards.append(z_batch_reward)
+
+        return loss_rl
+
+
+    def _get_regularization_loss(self, z, rationale_len, rationale_num, mask=None):
         """
         Compute regularization loss, based on a given rationale sequence.
         Inputs:
@@ -121,10 +147,10 @@ class Rationalizer(nn.Module):
 
         mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
 
-        continuity_ratio = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,) 
+        continuity_ratio = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,)
         percentage = rationale_num * 2 / seq_lengths # two transitions from rationale to not.
         continuity_loss = torch.abs(continuity_ratio - percentage)
-    
+
         sparsity_ratio = torch.sum(mask_z, dim=-1) / seq_lengths  # (batch_size,).
         percentage = rationale_len / seq_lengths
         sparsity_loss = torch.abs(sparsity_ratio - percentage)
@@ -132,79 +158,63 @@ class Rationalizer(nn.Module):
         return continuity_loss, sparsity_loss
 
 
-    def _get_advantages(self, predict, anti_predict, label, z, neg_log_probs, baseline, mask):
+    def _get_classifier_loss(self, predict, y):
         """
-        Input:
-            z -- (batch_size, length).
+        Get loss and accuracy for classifier or anti-classifier.
+        Inputs:
+        Outputs:
         """
-        
-        # Total loss of accuracy (not batchwise).
-        _, y_pred = torch.max(predict, dim=1)
-        prediction = (y_pred == label).type(torch.FloatTensor)
-        _, y_anti_pred = torch.max(anti_predict, dim=1)
-        prediction_anti = (y_anti_pred == label).type(torch.FloatTensor) * self.lambda_anti
+        loss_c = torch.mean(self.loss_func(predict, y))
+        accuracy_c = (torch.max(predict, dim=1)[1] == y).float()
         if self.use_cuda:
-            prediction = prediction.cuda()  # (batch_size,).
-            prediction_anti = prediction_anti.cuda()
+            accuracy_c = accuracy_c.cuda()
+        return loss_c, accuracy_c
+
+
+    def train_one_step(self, x, y, m):
+        """
+        Train one step of the model from x, y and m; and backpropagate errors.
+        Inputs:
+            x -- Variable() of input x, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0-|vocab| pointing to a token.
+            y -- Variable() of output y, shape (batch_size,),
+                 each element in the batch is an integer representing the label.
+            m -- Variable() of mask m, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+        Outputs:
+            loss_val -- list of losses, [classifier, anti_classifier, tagger].
+            predict -- prediction score of classifier, shape (batch_size, |label|),
+                       each element at i is a predicted probability for label[i].
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+        """
+
+        # Forward model and get rationales, predictions, etc.
+        predict, anti_predict, z, neg_log_probs = self.forward(x, m)
+
+        # Get loss and accuracy for classifier and anti-classifier.
+        loss_classifier, accuracy_classifier = self._get_classifier_loss(predict, y)
+        loss_anti_classifier, accuracy_anti_classifier = self._get_classifier_loss(anti_predict, y)
+
+        # Get regularization loss for tagged rationales.
+        loss_continuity, loss_sparsity = self._get_regularization_loss(z, self.rationale_len, self.rationale_num, m)
+
+        # Get reinforce-style loss for tagger.
+        loss_tagger = self._get_tagger_loss(accuracy_classifier, accuracy_anti_classifier,
+                                            loss_continuity, loss_sparsity,
+                                            z, neg_log_probs, m)
+
+        # Backpropagate losses.
+        losses = [loss_classifier, loss_anti_classifier, loss_tagger]
+        opts = [self.opt_classifier, self.opt_anti_classifier, self.opt_tagger]
+        loss_val = []
+        for loss, opt in zip(losses, opts):
+            loss.backward()
+            opt.step()
+            opt.zero_grad()
+            loss_val.append(loss.item())
         
-        continuity_loss, sparsity_loss = self._regularization_loss_batch(z, self.rationale_len, self.rationale_num, mask)
-        
-        continuity_loss *= self.lambda_continuity
-        sparsity_loss *= self.lambda_sparsity
-
-        rewards = prediction - prediction_anti - sparsity_loss - continuity_loss  # batch RL reward.
-
-        advantages = rewards - baseline  # (batch_size,).
-        advantages = Variable(advantages.data, requires_grad=False)
-        if self.use_cuda:
-            advantages = advantages.cuda()
-        
-        return advantages, rewards, continuity_loss, sparsity_loss
-
-
-    def _get_loss(self, predict, anti_predict, z, neg_log_probs, baseline, mask, label):
-        reward_tuple = self._get_advantages(predict, anti_predict, label, z, neg_log_probs, baseline, mask)
-        advantages, rewards, continuity_loss, sparsity_loss = reward_tuple
-
-        advantages_expand_ = advantages.unsqueeze(-1).expand_as(neg_log_probs)  # (batch_size, q_length).
-        rl_loss = torch.sum(neg_log_probs * advantages_expand_ * mask)
-        
-        return rl_loss, rewards, continuity_loss, sparsity_loss
-
-
-    def train_one_step(self, x, label, mask):
-
-        baseline = Variable(torch.FloatTensor([float(np.mean(self.z_history_rewards))]))
-        if self.use_cuda:
-            baseline = baseline.cuda()
-
-        predict, anti_predict, z, neg_log_probs = self.forward(x, mask)
-        
-        loss_anti_c = torch.mean(self.loss_func(anti_predict, label))        
-        loss_c = torch.mean(self.loss_func(predict, label))
-        loss_tuple = self._get_loss(predict, anti_predict, z, neg_log_probs, baseline, mask, label)
-        rl_loss, rewards, continuity_loss, sparsity_loss = loss_tuple
-        
-        z_batch_reward = torch.mean(rewards).item()
-        self.z_history_rewards.append(z_batch_reward)
-
-        # Backprop loss to predictor E.
-        loss_anti_c.backward()
-        self.opt_anti_c.step()
-        self.opt_anti_c.zero_grad()
-        
-        # Backprop loss to predictor anti_E.
-        loss_c.backward()
-        self.opt_c.step()
-        self.opt_c.zero_grad()
-
-        # Backprop loss to generator G.
-        rl_loss.backward()
-        self.opt_t_rl.step()
-        self.opt_t_rl.zero_grad()
-        
-        losses = {"loss_c": loss_c.data, "loss_anti_c": loss_anti_c.data, "loss_t": rl_loss.data}
-        return losses, predict, z
+        return loss_val, predict, z
 
 
 # Test for Rationalizer.
@@ -214,6 +224,7 @@ def test_rationalizer(args):
     args.num_labels = 2
     args.embedding_dim = 4
     args.hidden_dim = 6
+    args.head_num = 2
 
     model = Rationalizer(embeddings, args)
     if args.cuda:
@@ -228,5 +239,5 @@ def test_rationalizer(args):
         y = y.cuda()
         m = m.cuda()
 
-    losses, predict, z = model.train_one_step(x, y, m)
-    print(losses, predict, z)
+    loss_val, predict, z = model.train_one_step(x, y, m)
+    print(loss_val, predict, z)
