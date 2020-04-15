@@ -210,9 +210,9 @@ class Rationalizer(nn.Module):
 # Test for Rationalizer.
 def test_rationalizer(args):
 
-    embeddings = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]).astype(np.float32)
+    embeddings = np.array([[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]).astype(np.float32)
     args.num_labels = 2
-    args.embedding_dim = 3
+    args.embedding_dim = 4
     args.hidden_dim = 6
 
     model = Rationalizer(embeddings, args)
@@ -220,9 +220,9 @@ def test_rationalizer(args):
         model.cuda()
     
     model.train()
-    x = Variable(torch.tensor([[1, 3, 3, 2], [2, 1, 3, 0], [3, 1, 2, 0]]))  # (batch_size, seq_len).
+    x = Variable(torch.tensor([[1, 3, 3, 2, 2], [2, 1, 3, 1, 0], [3, 1, 2, 0, 0]]))  # (batch_size, seq_len).
     y = Variable(torch.tensor([1, 0, 1]))  # (batch_size,).
-    m = Variable(torch.tensor([[1, 1, 1, 1], [1, 1, 1, 0], [1, 1, 1, 0]]))  # (batch_size, seq_len).
+    m = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]]))  # (batch_size, seq_len).
     if args.cuda:
         x = x.cuda()
         y = y.cuda()

@@ -109,3 +109,50 @@ class CnnEncoder(nn.Module):
         hiddens = self.cnn(e_T)
 
         return hiddens
+
+
+class TrmEncoder(nn.Module):
+    """
+    Basic Transformer encoder module, input embeddings and output hidden states.
+    """
+
+    def __init__(self, args):
+        """
+        Inputs:
+            args.hidden_dim -- dimension of hidden states.
+            args.head_num -- number of heads for multi head attention.
+            args.layer_num -- number of Transformer layers.
+            args.embedding_dim -- dimension of word embeddings.
+        """
+        super(TrmEncoder, self).__init__()
+        self.trm = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=args.embedding_dim,
+                                                                    nhead=args.head_num,
+                                                                    dim_feedforward=args.hidden_dim),
+                                         num_layers=args.layer_num)
+        self.linear = nn.Linear(args.embedding_dim, args.hidden_dim)
+
+
+    def forward(self, e, m=None):
+        """
+        Inputs:
+            e -- input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
+                 each element in the seq_len is a word embedding of embedding_dim.
+            m -- mask of the input sequence, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+        Outputs:
+            hiddens -- hidden states of the encoder, shape (batch_size, hidden_dim, seq_len).
+        """
+
+        # Pass embeddings through a Transformer layer,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, embedding_dim).
+        hiddens = self.trm(e)
+
+        # Pass embeddings through another linear layer,
+        # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, hidden_dim).
+        hiddens = self.linear(hiddens)
+        
+        # Permute hiddens,
+        # (batch_size, seq_len, hidden_dim) -> (batch_size, hidden_dim, seq_len).
+        hiddens = hiddens.permute(0, 2, 1)
+        
+        return hiddens

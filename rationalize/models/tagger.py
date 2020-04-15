@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from models.encoder import RnnEncoder, CnnEncoder
+from models.encoder import RnnEncoder, CnnEncoder, TrmEncoder
 
 
 class Tagger(nn.Module):
@@ -19,15 +19,16 @@ class Tagger(nn.Module):
         Inputs:
             args.z_dim -- dimension of rationale, always 2.
             args.hidden_dim -- dimension of hidden states.
-            args.model_type -- type of model, RNN or CNN.
+            args.model_type -- type of model, RNN/CNN/TRM.
             args.layer_num -- number of layers.
             args.cell_type -- type of cell GRU or LSTM (RNN only).
             args.kernel_size -- kernel size of the conv1d (CNN only).
+            args.head_num -- number of heads for multi head attention (TRM only).
             args.embedding_dim -- dimension of word embeddings.
         """
         super(Tagger, self).__init__()
         self.NEG_INF = -1.0e6
-        encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder}
+        encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder, "TRM": TrmEncoder}
         self.encoder = encoders[args.model_type](args)
         self.predictor = nn.Linear(args.hidden_dim, args.z_dim)
 
