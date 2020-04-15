@@ -130,32 +130,40 @@ class Rationalizer(nn.Module):
         """
         Get regularization loss of rationale selection.
         Inputs:
-            z -- torch variable, "binary" rationale, (batch_size, sequence_length).
-            rationale_len -- suggested upper bound of total tokens of all rationales.
-            rationale_num -- suggested number of rationales.
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+            m -- mask m, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
-            continuity_loss --  \sum_{i} | z_{i-1} - z_{i} |.
-            sparsity_loss -- |mean(z_{i}) - percent|.
+            loss_continuity -- loss for continuity, shape (batch_size,),
+            sparsity_loss -- loss for sparsity, shape (batch_size,),
         """
 
+        # Get sequence lengths and masked rationales.
         if m is not None:
-            mask_z = z * m  # (batch_size,).
-            seq_lengths = torch.sum(m, dim=1)
+            mask_z = z * m
+            seq_lens = torch.sum(m, dim=1)
         else:
             mask_z = z
-            seq_lengths = torch.sum(z - z + 1.0, dim=1)
+            seq_lens = torch.sum(z - z + 1.0, dim=1)
 
-        mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
+        # Shift masked z by one to the left: z[i-1] = z[i],
+        # Then, get the number of transitions (twice the number of rationales), and normalize by seq_len,
+        # Then, get loss for continuity, defined as the difference of rationale ratio this run v.s. recommended,
+        # (batch_size, seq_len) -> (batch_size,).
+        mask_z_shift_left = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
+        ratio_continuity = torch.sum(torch.abs(mask_z - mask_z_shift_left), dim=-1) / seq_lens
+        ratio_recommend = self.rationale_num * 2 / seq_lens
+        loss_continuity = torch.abs(ratio_continuity - ratio_recommend)
 
-        continuity_ratio = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,)
-        percentage = self.rationale_num * 2 / seq_lengths # two transitions from rationale to not.
-        continuity_loss = torch.abs(continuity_ratio - percentage)
+        # Get the length of all selected rationales, and normalize by seq_len,
+        # Then, get loss for sparsity, defined as the difference of rationale len this run v.s. recommended,
+        # (batch_size, seq_len) -> (batch_size,).
+        ratio_sparsity = torch.sum(mask_z, dim=-1) / seq_lens
+        ratio_recommend = self.rationale_len / seq_lens
+        loss_sparsity = torch.abs(ratio_sparsity - ratio_recommend)
 
-        sparsity_ratio = torch.sum(mask_z, dim=-1) / seq_lengths  # (batch_size,).
-        percentage = self.rationale_len / seq_lengths
-        sparsity_loss = torch.abs(sparsity_ratio - percentage)
-
-        return continuity_loss, sparsity_loss
+        return loss_continuity, loss_sparsity
 
 
     def _get_classifier_loss(self, predict, y):
