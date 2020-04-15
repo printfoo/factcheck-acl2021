@@ -45,8 +45,8 @@ class Rationalizer(nn.Module):
         self.opt_tagger = torch.optim.Adam(p_grad(self.tagger), lr=args.lr*0.1)
 
         # Initialize reward queue for reinforce-style loss.
-        self.z_history_rewards = deque(maxlen=200)
-        self.z_history_rewards.append(0.)
+        self.history_rewards = deque(maxlen=200)
+        self.history_rewards.append(0.)
 
 
     def _create_embed_layer(self, embeddings, fine_tuning=False):
@@ -56,7 +56,7 @@ class Rationalizer(nn.Module):
             embeddings -- embeddings of tokens, shape (|vocab|, embedding_dim). 
         Output:
             embed_layer -- a lookup layer for embeddings,
-                           inputs token' ID and returns token's embedding.
+                           inputs word index and returns word embedding.
         """
         embed_layer = nn.Embedding(self.vocab_size, self.embedding_dim)
         embed_layer.weight.data = torch.from_numpy(embeddings)
@@ -101,29 +101,57 @@ class Rationalizer(nn.Module):
         return predict, anti_predict, z, neg_log_probs
     
 
-    def _get_tagger_loss(self, accuracy_c, accuracy_anti_c, loss_continuity, loss_sparsity, z, neg_log_probs, m):
+    def _get_tagger_loss(self, accuracy_classifier, accuracy_anti_classifier,
+                         loss_continuity, loss_sparsity, z, neg_log_probs, m):
+        """
+        Get reinforce-style loss for tagger.
+        Inputs:
+            accuracy_classifier -- accuracy of the classifier, shape (batch_size,),
+                                   each element at i is of 0/1 for incorrect/correct prediction.
+            accuracy_anti_classifier -- accuracy of the anti_classifier, shape (batch_size,),
+            loss_continuity -- loss for continuity, shape (batch_size,),
+            sparsity_loss -- loss for sparsity, shape (batch_size,),
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+            neg_log_probs -- negative log probability, shape (batch_size, seq_len).
+            m -- mask m, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+        Outputs:
+            loss_tagger -- reinforce-style loss for tagger, shape (batch_size, seq_len).
+        """
 
-
-        # Baseline reward for reinforce-style learning, average of history.
-        rl_base = Variable(torch.tensor(np.mean(self.z_history_rewards)))
+        # Mean of history rewards as baseline,
+        # (|history|,) -> (1,).
+        history_rewards_mean = Variable(torch.tensor(np.mean(self.history_rewards)))
         if self.use_cuda:
-            rl_base = rl_base.cuda()
+            history_rewards_mean = history_rewards_mean.cuda()
 
-        rewards = accuracy_c - accuracy_anti_c * self.lambda_anti - loss_continuity * self.lambda_continuity - loss_sparsity * self.lambda_sparsity  # batch RL reward.
+        # Reinforce-style loss for this batch,
+        # (batch_size,) -> (batch_size,).
+        rewards = (accuracy_classifier
+                   - accuracy_anti_classifier * self.lambda_anti
+                   - loss_continuity * self.lambda_continuity 
+                   - loss_sparsity * self.lambda_sparsity)
 
-        advantages = rewards - rl_base  # (batch_size,).
-        advantages = Variable(advantages.data, requires_grad=False)
+        # Update mean loss of this batch to the history reward queue.
+        self.history_rewards.append(torch.mean(rewards).item())
+
+        # Get advantages of this run over history.
+        # (batch_size,) -> (batch_size,).
+        advantages = rewards - history_rewards_mean
+        advantages.requires_grad = False
         if self.use_cuda:
             advantages = advantages.cuda()
 
-        advantages_expand_ = advantages.unsqueeze(-1).expand_as(neg_log_probs)  # (batch_size, q_length).
-        loss_rl = torch.sum(neg_log_probs * advantages_expand_ * m)
+        # Expand advantages to the same shape of z, by copying its value to seq_len,
+        # (batch_size,) -> (batch_size, seq_len).
+        advantages = advantages.unsqueeze(-1).expand_as(neg_log_probs)
 
-        # Update reinforce-style loss of this batch to the history reward queue.
-        z_batch_reward = torch.mean(rewards).item()
-        self.z_history_rewards.append(z_batch_reward)
+        # Sum up advantages by the sequence with neg_log_probs, and by the batch,
+        # (batch_size, seq_len) -> (1,).
+        loss_tagger = torch.sum(neg_log_probs * advantages * m)
 
-        return loss_rl
+        return loss_tagger
 
 
     def _get_regularization_loss(self, z, m=None):
@@ -136,7 +164,7 @@ class Rationalizer(nn.Module):
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
             loss_continuity -- loss for continuity, shape (batch_size,),
-            sparsity_loss -- loss for sparsity, shape (batch_size,),
+            loss_sparsity -- loss for sparsity, shape (batch_size,),
         """
 
         # Get sequence lengths and masked rationales.
@@ -148,8 +176,8 @@ class Rationalizer(nn.Module):
             seq_lens = torch.sum(z - z + 1.0, dim=1)
 
         # Shift masked z by one to the left: z[i-1] = z[i],
-        # Then, get the number of transitions (twice the number of rationales), and normalize by seq_len,
-        # Then, get loss for continuity, defined as the difference of rationale ratio this run v.s. recommended,
+        # Then, get the number of transitions (2 * the number of rationales), and normalize by seq_len,
+        # Then, get loss for continuity: the difference of rationale ratio this run v.s. recommended,
         # (batch_size, seq_len) -> (batch_size,).
         mask_z_shift_left = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
         ratio_continuity = torch.sum(torch.abs(mask_z - mask_z_shift_left), dim=-1) / seq_lens
@@ -157,7 +185,7 @@ class Rationalizer(nn.Module):
         loss_continuity = torch.abs(ratio_continuity - ratio_recommend)
 
         # Get the length of all selected rationales, and normalize by seq_len,
-        # Then, get loss for sparsity, defined as the difference of rationale len this run v.s. recommended,
+        # Then, get loss for sparsity: the difference of rationale len this run v.s. recommended,
         # (batch_size, seq_len) -> (batch_size,).
         ratio_sparsity = torch.sum(mask_z, dim=-1) / seq_lens
         ratio_recommend = self.rationale_len / seq_lens
