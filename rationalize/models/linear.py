@@ -48,9 +48,9 @@ class Linear(nn.Module):
     def forward(self, x, m):
         """
         Inputs:
-            x -- Variable() of input x, shape (batch_size, seq_len),
+            x -- input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
-            m -- Variable() of mask m, shape (batch_size, seq_len).
+            m -- mask m, shape (batch_size, seq_len).
                  each element in the seq_len is of 0/1 selecting a token or not.
                  (Not used in this model.)
         Outputs:
@@ -76,11 +76,11 @@ class Linear(nn.Module):
     def train_one_step(self, x, y, m):
         """
         Inputs:
-            x -- Variable() of input x, shape (batch_size, seq_len),
+            x -- input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
-            y -- Variable() of label y, shape (batch_size,),
+            y -- label y, shape (batch_size,),
                  only one scalar per instance 0-|label| pointing to a label.
-            m -- Variable() of mask m, shape (batch_size, seq_len).
+            m -- mask m, shape (batch_size, seq_len).
                  each element in the seq_len is of 0/1 selecting a token or not.
                  (Not used in this model.)
         Outputs:

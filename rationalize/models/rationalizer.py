@@ -68,9 +68,9 @@ class Rationalizer(nn.Module):
         """
         Forward model from x and m and get rationales, predictions, etc.
         Inputs:
-            x -- Variable() of input x, shape (batch_size, seq_len),
+            x -- input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
-            m -- Variable() of mask m, shape (batch_size, seq_len),
+            m -- mask m, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
             predict -- prediction score of classifier, shape (batch_size, |label|),
@@ -126,9 +126,9 @@ class Rationalizer(nn.Module):
         return loss_rl
 
 
-    def _get_regularization_loss(self, z, rationale_len, rationale_num, mask=None):
+    def _get_regularization_loss(self, z, m=None):
         """
-        Compute regularization loss, based on a given rationale sequence.
+        Get regularization loss of rationale selection.
         Inputs:
             z -- torch variable, "binary" rationale, (batch_size, sequence_length).
             rationale_len -- suggested upper bound of total tokens of all rationales.
@@ -138,9 +138,9 @@ class Rationalizer(nn.Module):
             sparsity_loss -- |mean(z_{i}) - percent|.
         """
 
-        if mask is not None:
-            mask_z = z * mask  # (batch_size,).
-            seq_lengths = torch.sum(mask, dim=1)
+        if m is not None:
+            mask_z = z * m  # (batch_size,).
+            seq_lengths = torch.sum(m, dim=1)
         else:
             mask_z = z
             seq_lengths = torch.sum(z - z + 1.0, dim=1)
@@ -148,11 +148,11 @@ class Rationalizer(nn.Module):
         mask_z_ = torch.cat([mask_z[:, 1:], mask_z[:, -1:]], dim=-1)
 
         continuity_ratio = torch.sum(torch.abs(mask_z - mask_z_), dim=-1) / seq_lengths  # (batch_size,)
-        percentage = rationale_num * 2 / seq_lengths # two transitions from rationale to not.
+        percentage = self.rationale_num * 2 / seq_lengths # two transitions from rationale to not.
         continuity_loss = torch.abs(continuity_ratio - percentage)
 
         sparsity_ratio = torch.sum(mask_z, dim=-1) / seq_lengths  # (batch_size,).
-        percentage = rationale_len / seq_lengths
+        percentage = self.rationale_len / seq_lengths
         sparsity_loss = torch.abs(sparsity_ratio - percentage)
 
         return continuity_loss, sparsity_loss
@@ -162,24 +162,39 @@ class Rationalizer(nn.Module):
         """
         Get loss and accuracy for classifier or anti-classifier.
         Inputs:
+            predict -- prediction score of classifier, shape (batch_size, |label|),
+                       each element at i is a predicted probability for label[i].
+            y -- output y, shape (batch_size,),
+                 each element in the batch is an integer representing the label.
         Outputs:
+            loss_classifier -- loss of the classifier, shape (1,),
+                               a scala averages the loss of this batch.
+            accuracy_classifier -- accuracy of the classifier, shape (batch_size,),
+                                   each element at i is of 0/1 for incorrect/correct prediction.
         """
-        loss_c = torch.mean(self.loss_func(predict, y))
-        accuracy_c = (torch.max(predict, dim=1)[1] == y).float()
+
+        # Get loss of the classifier for the entire batch,
+        # (batch_size,) -> (1,)
+        loss_classifier = torch.mean(self.loss_func(predict, y))
+        
+        # Get accuracy of the classifier for each input, 
+        # (batch_size,) -> (batch_size,)
+        accuracy_classifier = (torch.max(predict, dim=1)[1] == y).float()
         if self.use_cuda:
-            accuracy_c = accuracy_c.cuda()
-        return loss_c, accuracy_c
+            accuracy_classifier = accuracy_classifier.cuda()
+        
+        return loss_classifier, accuracy_classifier
 
 
     def train_one_step(self, x, y, m):
         """
         Train one step of the model from x, y and m; and backpropagate errors.
         Inputs:
-            x -- Variable() of input x, shape (batch_size, seq_len),
+            x -- input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
-            y -- Variable() of output y, shape (batch_size,),
+            y -- output y, shape (batch_size,),
                  each element in the batch is an integer representing the label.
-            m -- Variable() of mask m, shape (batch_size, seq_len),
+            m -- mask m, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
             loss_val -- list of losses, [classifier, anti_classifier, tagger].
@@ -195,9 +210,9 @@ class Rationalizer(nn.Module):
         # Get loss and accuracy for classifier and anti-classifier.
         loss_classifier, accuracy_classifier = self._get_classifier_loss(predict, y)
         loss_anti_classifier, accuracy_anti_classifier = self._get_classifier_loss(anti_predict, y)
-
+        
         # Get regularization loss for tagged rationales.
-        loss_continuity, loss_sparsity = self._get_regularization_loss(z, self.rationale_len, self.rationale_num, m)
+        loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
 
         # Get reinforce-style loss for tagger.
         loss_tagger = self._get_tagger_loss(accuracy_classifier, accuracy_anti_classifier,
