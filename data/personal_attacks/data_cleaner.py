@@ -30,14 +30,16 @@ def process_comment(row):
         tokens = tokens[:-1]
         if row["rationale"] == row["rationale"]:  # If not NaN.
             row["rationale"] = row["rationale"][:-1]
+    
+    row["comment"] = " ".join(tokens)
 
     # Validity checks.
     if row["rationale"] == row["rationale"]:  # If not NaN.
-        assert len(tokens) == len(row["rationale"])
+        assert len(row["comment"].split(" ")) == len(row["rationale"])
     if row["split_y"] == row["split_y"]:  # If not NaN.
         assert row["split_x"] == row["split_y"]
 
-    return " ".join(tokens)
+    return row
 
 
 class DataCleaner(object):
@@ -80,18 +82,16 @@ class DataCleaner(object):
         
         # Merge sentence and label.
         df = sentence.merge(label, on="rev_id", how="inner").merge(rationale, on="rev_id", how="left")
-        df["comment"] = df.apply(process_comment, axis=1)
+        df = df.apply(process_comment, axis=1)
         df = df.dropna(subset={"comment"})
         df["split_y"] = df["split_y"].fillna("train")
-        df = df.fillna("")
         df["label"] = df["attack"].apply(lambda a: "attack" if a >= self.score_threshold else "not_attack")
+        df = df.fillna("")
 
         # Save data.
         for split in ["train", "dev", "test"]:
-            data = df[df["split_y"] == split][["label", "comment", "rationale"]].values
-            content = "\n".join("\t".join(field for field in line) for line in data)
-            with open(split + ".tsv", "w") as f:
-                f.write(content)
+            data = df[df["split_y"] == split][["label", "comment", "rationale"]]
+            data.to_csv(split + ".tsv", index=False, sep="\t")
 
 
 if __name__ == "__main__":

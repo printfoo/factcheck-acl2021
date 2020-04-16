@@ -9,7 +9,7 @@ parser.add_argument("--mode", type=str, default="train",
                     help="Run mode, train or eval.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--data_name", type=str, default="beer_reviews",
+parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
 parser.add_argument("--config_name", type=str, default="rationalizer_trm",
                     help="Dataset name.")
@@ -88,16 +88,19 @@ if args.mode in {"train", "analyze"}:
 
 
 elif args.mode == "test":
-
+    
+    # Test data.
+    from datasets.dataset_loader import test_data
+    test_data(args.data_path, train_args)
+    print("Model successfully tested:", args.data_name)
+    
+    """
     # Test model.
     test_model = getattr(importlib.import_module("models." + train_args.model_name),
                          "test_" + train_args.model_name)
     test_model(train_args)
     print("Model successfully tested:", train_args.model_name)
-    
-    # Test data.
-    # from datasets.dataset_loader import test_data
-    # test_data(args.data_path, train_args)
+    """
 
 
 elif args.mode == "purge":

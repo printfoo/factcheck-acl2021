@@ -26,7 +26,8 @@ def train(model, data, args):
     for i in tqdm(range(args.num_iteration + 1)):
 
         model.train()  # Set model to train mode.
-        x, y, m = data.get_train_batch(batch_size=args.batch_size, sort=True)  # Sample a batch.
+        x, y, _, m = data.get_train_batch(batch_size=args.batch_size,
+                                          sort=True)  # Sample a batch.
 
         # Save values to torch tensors.
         x = Variable(torch.from_numpy(x))

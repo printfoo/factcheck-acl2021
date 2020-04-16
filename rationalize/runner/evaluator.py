@@ -17,8 +17,11 @@ def evaluate(model, data, args, set_name):
     for start in range(instance_count // args.batch_size):
 
         # Get a batch.
-        batch_idx = range(start * args.batch_size, (start + 1) * args.batch_size)
-        x, y, m = data.get_batch(set_name, batch_idx=batch_idx, sort=True)
+        batch_idx = range(start * args.batch_size,
+                          (start + 1) * args.batch_size)
+        x, y, _, m = data.get_batch(set_name,
+                                    batch_idx=batch_idx,
+                                    sort=True)
 
         # Save values to torch tensors.
         x = Variable(torch.from_numpy(x))

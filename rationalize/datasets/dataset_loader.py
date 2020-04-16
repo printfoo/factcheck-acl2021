@@ -3,6 +3,7 @@
 
 import random, sys, os
 import numpy as np
+import pandas as pd
 from colored import fg, attr, bg
 
 from datasets.dataset_operator import SentenceClassificationSet
@@ -83,7 +84,7 @@ class SentenceClassification(object):
         for data_id, data_set in self.data_sets.items():
             data_set.pairs = _index_words(word_freq_dict, data_set.get_pairs())
 
-        print('Size of the final vocabulary:', len(self.word_vocab))
+        print("Size of the final vocabulary:", len(self.word_vocab))
         
         
     def _get_word_freq(self, data_sets_):
@@ -109,7 +110,7 @@ class SentenceClassification(object):
                 sentence = pair_dict["sentence"]
                 _add_freq_from_sentence(word_freq_dict, sentence)
 
-        print('Size of the raw vocabulary:', len(word_freq_dict))
+        print("Size of the raw vocabulary:", len(word_freq_dict))
         return word_freq_dict
 
 
@@ -123,14 +124,19 @@ class SentenceClassification(object):
         # Load instances.
         self.data_sets[data_set] = SentenceClassificationSet()
         file_path = os.path.join(self.data_path, data_set + ".tsv")
-        with open(file_path, "r") as f:
-            for line in f:
-                label, tokens = line.split("\t")[:2]
-                if label not in self.label_vocab:
-                    self.label_vocab[label] = len(self.label_vocab)
-                label = self.label_vocab[label]
-                tokens = tokens.split(" ")
-                self.data_sets[data_set].add_one(tokens, label, truncate_num=self.truncate_num)
+        file = pd.read_csv(file_path, sep="\t")
+        file = file.fillna("")
+        for line in file.values:
+            label, tokens, rationale = line
+            if label not in self.label_vocab:
+                self.label_vocab[label] = len(self.label_vocab)
+            label = self.label_vocab[label]
+            tokens = tokens.split(" ")
+            rationale = [int(r) for r in rationale]
+            self.data_sets[data_set].add_one(tokens,
+                                             label,
+                                             rationale,
+                                             self.truncate_num)
 
 
     def initial_embedding(self, method="random", size=100, path=None):
@@ -200,24 +206,28 @@ class SentenceClassification(object):
         """
 
         data_set = self.data_sets[set_id]
-        xs_, ys_, max_x_len_ = data_set.get_samples_from_one_list(batch_idx, self.truncate_num)
+        xs_, ys_, rs_, max_x_len_ = data_set.get_samples_from_ids(batch_idx,
+                                                                  self.truncate_num)
 
         ms_ = []
         for i, x in enumerate(xs_):
-            xs_[i] = x + (max_x_len_ - len(x)) * [0]
+            xs_[i] = xs_[i] + (max_x_len_ - len(x)) * [0]
+            rs_[i] = rs_[i] + (max_x_len_ - len(x)) * [0]
             ms_.append([1] * len(x) + [0] * (max_x_len_ - len(x)))  # Mask <PAD>.
-            
+
         x = np.array(xs_, dtype=np.int64)
         y = np.array(ys_, dtype=np.int64)
+        r = np.array(rs_, dtype=np.int64)
         m = np.array(ms_, dtype=np.int64)
         
         if sort:  # Sort all according to seq_len.
             x_sort_idx = np.argsort(-np.sum(m, axis=1))
             x = x[x_sort_idx, :]
             y = y[x_sort_idx]
+            r = r[x_sort_idx, :]
             m = m[x_sort_idx, :]
 
-        return x, y, m
+        return x, y, r, m
 
 
     def display_example(self, x, z=None, threshold=0.9):
@@ -245,6 +255,10 @@ def test_data(data_path, args):
     # print(dataloader.label_vocab)
     data = SentenceClassification(data_path, args)  # Load data.
     args.num_labels = len(data.label_vocab)  # Number of labels.
-    embeddings = data.initial_embedding("random", 100)  # Load embeddings.
-    embeddings = data.initial_embedding("onehot", 100)  # Load embeddings.
-    print(embeddings)
+    # x, y, r, m = data.get_train_batch(batch_size=args.batch_size, sort=True)  # Sample a batch.
+    # print(x, y, r, m)
+    x, y, r, m = data.get_batch("dev", batch_idx=range(0, 5), sort=True)
+    print(x, y, r, m)
+    # embeddings = data.initial_embedding("random", 100)  # Load embeddings.
+    # embeddings = data.initial_embedding("onehot", 100)  # Load embeddings.
+    # print(embeddings)

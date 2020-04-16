@@ -13,10 +13,13 @@ class SentenceClassificationSet(object):
         self.instances = []
         self.label2instance_dict = {}
         
-    def add_one(self, sentence, label, truncate_num=0):
+    def add_one(self, sentence, label, rationale, truncate_num=0):
         if truncate_num > 0:  # Truncate sentences.
             sentence = sentence[:truncate_num]
-        self.instances.append({"sentence": " ".join(sentence), "label": label})
+            rationale = rationale[:truncate_num]
+        self.instances.append({"sentence": " ".join(sentence),
+                               "label": label,
+                               "rationale": rationale})
         if label not in self.label2instance_dict:
             self.label2instance_dict[label] = {}
         
@@ -28,9 +31,10 @@ class SentenceClassificationSet(object):
     def size(self):
         return len(self.instances)
     
-    def get_samples_from_one_list(self, batch_idx, truncate_num=0):
+    def get_samples_from_ids(self, batch_idx, truncate_num=0):
         xs = []
         ys = []
+        rs = []
         max_x_len = -1
 
         for i, idx in enumerate(batch_idx):
@@ -44,10 +48,17 @@ class SentenceClassificationSet(object):
             sentence = pair_dict_["sentence"]
             if truncate_num > 0:  # Truncate sentences.
                 sentence = sentence[:truncate_num]
-            max_x_len = max(max_x_len, len(sentence))
             xs.append(sentence)
             
-        return xs, ys, max_x_len
+            # Add a rationale to sample.
+            rationale = pair_dict_["rationale"]
+            if truncate_num > 0:  # Truncate rationales.
+                rationale = rationale[:truncate_num]
+            rs.append(rationale)
+             
+            max_x_len = max(max_x_len, len(sentence))
+            
+        return xs, ys, rs, max_x_len
     
             
     def print_info(self):

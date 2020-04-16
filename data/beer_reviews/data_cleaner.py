@@ -28,11 +28,14 @@ class DataCleaner(object):
         
         train_path = os.path.join(self.data_dir, "reviews.aspect0.train.txt.gz")
         outfile = (open("train.tsv", "w"), open("dev.tsv", "w"))
+        outfile[0].write("label\tcomment\trationale\n")
+        outfile[1].write("label\tcomment\trationale\n")
         self._helper(train_path, outfile, split_ratio=self.split_ratio)
         print("Train/Dev is cleaned with %.2f" % self.split_ratio)
 
         test_path = os.path.join(self.data_dir, "reviews.aspect0.heldout.txt.gz")
         outfile = (open("test.tsv", "w"), None)
+        outfile[0].write("label\tcomment\trationale\n")
         self._helper(test_path, outfile)
         print("Test data is cleaned.") 
         
@@ -82,7 +85,7 @@ class DataCleaner(object):
                     continue
 
                 # Write one line.
-                rationale = "0" * (end - start)
+                rationale = ""
                 tokens = " ".join(tokens[start:end])
                 label = str(label)
                 line = "\t".join([label, tokens, rationale]) + "\n"
