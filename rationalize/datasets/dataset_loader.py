@@ -211,8 +211,8 @@ class SentenceClassification(object):
 
         ms_ = []
         for i, x in enumerate(xs_):
-            xs_[i] = xs_[i] + (max_x_len_ - len(x)) * [0]
-            rs_[i] = rs_[i] + (max_x_len_ - len(x)) * [0]
+            xs_[i] = xs_[i] + (max_x_len_ - len(xs_[i])) * [0]
+            rs_[i] = rs_[i] + (max_x_len_ - len(rs_[i])) * [0]
             ms_.append([1] * len(x) + [0] * (max_x_len_ - len(x)))  # Mask <PAD>.
 
         x = np.array(xs_, dtype=np.int64)
