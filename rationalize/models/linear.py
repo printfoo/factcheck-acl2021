@@ -70,7 +70,7 @@ class Linear(nn.Module):
         # Feed to a forward layer and get predictions,
         # (batch_size, embedding_dim) -> (batch_size,).
         predict = self.linear(doc_embedding)
-        return predict,
+        return predict, [], [], []
 
 
     def train_one_step(self, x, y, m):
@@ -91,9 +91,9 @@ class Linear(nn.Module):
                  each element in the seq_len is of 0/1 selecting a token or not.
                  (Not used in this model.)
         """
-        forward_tuple = self(x, m)
-        if len(forward_tuple) == 1:  # If forward only returns a single value.
-            predict = forward_tuple[0]  # (batch_size, |label|).
+
+        # Get prediction.
+        predict, _, _, _ = self(x, m)
 
         # Get loss.
         pred_loss_ = self.pred_loss(predict, y)

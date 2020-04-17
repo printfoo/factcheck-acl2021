@@ -55,7 +55,7 @@ def evaluate(model, data, args, set_name):
     for metric_name, metric_func in metric_funcs.items():
         y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"])
         r_metrics[metric_name] = np.mean(r_history[metric_name])
-
+    
     print(set_name)
     print(y_metrics)
     print(r_metrics)
