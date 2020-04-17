@@ -44,7 +44,7 @@ def process_comment(row):
 
 class DataCleaner(object):
     """
-    Dataset cleaner for beer reviews.
+    Dataset cleaner for personal attacks.
     """
 
     def __init__(self, data_dir="raw", score_threshold=0.3):
