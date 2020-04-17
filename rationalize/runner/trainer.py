@@ -8,7 +8,7 @@ import random, os, json
 from tqdm import tqdm
 
 from runner.evaluator import evaluate
-from runner.metrics import get_batch_accuracy
+from runner.metrics import accuracy
 
 
 def train(model, data, args):
@@ -32,7 +32,7 @@ def train(model, data, args):
         # Save values to torch tensors.
         x = Variable(torch.from_numpy(x))
         y = Variable(torch.from_numpy(y))
-        m = Variable(torch.from_numpy(m)).type(torch.FloatTensor)
+        m = Variable(torch.from_numpy(m)).float()
         if args.cuda:
             x = x.cuda()
             y = y.cuda()
@@ -43,7 +43,7 @@ def train(model, data, args):
 
         # Evaluate classification accuracy.
         _, y_pred = torch.max(predict, dim=1)
-        tmp_acc += get_batch_accuracy(y_pred, y)
+        tmp_acc += accuracy(y.tolist(), y_pred.tolist())
 
         # Display every args.display_iteration.
         if args.display_iteration and i % args.display_iteration == 0:
@@ -60,12 +60,12 @@ def train(model, data, args):
         if args.eval_iteration and i % args.eval_iteration == 0:
 
             # Eval dev set.
-            metrics = evaluate(model, data, args, "dev")
-            accs["dev"].append(metrics["acc"])
+            metrics, _ = evaluate(model, data, args, "dev")
+            accs["dev"].append(metrics["accuracy"])
 
             # Eval test set.
-            metrics = evaluate(model, data, args, "test")
-            accs["test"].append(metrics["acc"])
+            metrics, _ = evaluate(model, data, args, "test")
+            accs["test"].append(metrics["accuracy"])
 
             # Adds train set metrics.
             accs["train"].append(tmp_acc / args.eval_iteration)
