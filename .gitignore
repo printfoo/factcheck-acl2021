@@ -5,9 +5,10 @@ __pycache__
 # MacOS.
 .DS_Store
 
-# Raw datasets.
+# Raw and cleaned datasets.
 data/*/raw/*
 !data/*/raw/download.sh
+data/*.tsv
 
 # Word embeddings.
 data/glove/*

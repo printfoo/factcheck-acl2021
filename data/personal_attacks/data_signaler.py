@@ -35,7 +35,6 @@ class DataSignaler(object):
             self.signal_dicts[l] = {w: s for w, s in vocab[vocab[l] > 0][["word", l]].values}
 
         df["signal"] = df.apply(self._get_signal, axis=1)
-        print(df)
         df.to_csv(self.train_dir, index=False, sep="\t")
 
 
