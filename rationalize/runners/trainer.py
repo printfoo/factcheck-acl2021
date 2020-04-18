@@ -58,7 +58,6 @@ def train(model, data, args):
 
         # Eval every args.eval_iteration.
         if args.eval_iteration and i % args.eval_iteration == 0:
-            print(predict)
 
             # Eval dev set.
             metrics, _ = evaluate(model, data, args, "dev")
