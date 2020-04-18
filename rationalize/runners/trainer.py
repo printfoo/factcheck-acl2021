@@ -7,8 +7,8 @@ import numpy as np
 import random, os, json
 from tqdm import tqdm
 
-from runner.evaluator import evaluate
-from runner.metrics import accuracy
+from runners.evaluator import evaluate
+from runners.metrics import accuracy
 
 
 def train(model, data, args):
@@ -58,6 +58,7 @@ def train(model, data, args):
 
         # Eval every args.eval_iteration.
         if args.eval_iteration and i % args.eval_iteration == 0:
+            print(predict)
 
             # Eval dev set.
             metrics, _ = evaluate(model, data, args, "dev")

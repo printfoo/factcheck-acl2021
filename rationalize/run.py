@@ -69,7 +69,7 @@ if args.mode in {"train", "analyze"}:
         print("Model successfully initialized:", model)
 
         # Train model.
-        from runner.trainer import train
+        from runners.trainer import train
         train(model, data, train_args)
         print("Model successfully trained.")
 

@@ -132,7 +132,7 @@ class SentenceClassification(object):
                 self.label_vocab[label] = len(self.label_vocab)
             label = self.label_vocab[label]
             tokens = tokens.split(" ")
-            rationale = [int(r) for r in rationale]
+            rationale = [float(r) if r else 0. for r in rationale.split(" ")]
             self.data_sets[data_set].add_one(tokens,
                                              label,
                                              rationale,

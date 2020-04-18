@@ -24,10 +24,8 @@ class Linear(nn.Module):
         self.linear = torch.nn.Linear(in_features=self.embedding_dim,
                                       out_features=args.num_labels)
 
-        self.opt = torch.optim.Adam(self.parameters(), lr=args.lr)
+        self.opt = torch.optim.SGD(self.parameters(), lr=args.lr)
         self.pred_loss = nn.CrossEntropyLoss()
-        self.l1_loss = nn.L1Loss()
-        self.lambda_l1 = args.lambda_l1
 
 
     def _create_embed_layer(self, embeddings):
@@ -96,10 +94,7 @@ class Linear(nn.Module):
         predict, _, _, _ = self(x, m)
 
         # Get loss.
-        pred_loss_ = self.pred_loss(predict, y)
-        w = self.linear.weight  # (|label|, embedding_dim).
-        l1_loss_ = self.l1_loss(w, w - w)
-        loss = pred_loss_ + self.lambda_l1 * l1_loss_
+        loss = self.pred_loss(predict, y)
 
         # Backpropagate.
         loss.backward()

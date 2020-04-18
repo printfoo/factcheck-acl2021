@@ -5,7 +5,7 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
-from runner.metrics import precision, recall, f1, accuracy
+from runners.metrics import precision, recall, f1, accuracy
 
 
 def evaluate(model, data, args, set_name):
