@@ -16,13 +16,8 @@ class DataSignaler(object):
         self.vocab_dir = os.path.join("linear_bow.analyze", "word_weight.json")
         self.NEG_INF = -1.0e6
         vocab = pd.read_json(self.vocab_dir, lines=True)
-        labels = set()
-        for c in vocab.columns:
-            if c != "word":
-                vocab[c] = vocab[c] #(vocab[c] - vocab[c].mean()) / vocab[c].std()
-                labels.add(c)
         self.signal_dicts = {}
-        for l in labels:
+        for l in set(vocab.columns) - {"word"}:
             self.signal_dicts[l] = {w: s for w, s in vocab[["word", l]].values}
         
     
@@ -31,9 +26,6 @@ class DataSignaler(object):
         comment = row["comment"].split(" ")
         signal = ["{:.5f}".format(signal_dict[c])
                   if c in signal_dict else "0.0" for c in comment]
-        if "fuck" in comment:
-            print(comment, signal)
-            exit()
         return " ".join(signal)
             
     
