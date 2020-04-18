@@ -8,7 +8,7 @@ __pycache__
 # Raw and cleaned datasets.
 data/*/raw/*
 !data/*/raw/download.sh
-data/*.tsv
+data/*/*.tsv
 
 # Word embeddings.
 data/glove/*

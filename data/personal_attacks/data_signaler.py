@@ -3,7 +3,6 @@
 
 import os, json
 import pandas as pd
-from scipy.special import softmax
 
 
 class DataSignaler(object):
@@ -13,31 +12,39 @@ class DataSignaler(object):
     """
 
     def __init__(self):
-        self.train_dir = "train.tsv"
+        self.data_dirs = ["train.tsv", "dev.tsv", "test.tsv"]
         self.vocab_dir = os.path.join("linear_bow.analyze", "word_weight.json")
         self.NEG_INF = -1.0e6
+        vocab = pd.read_json(self.vocab_dir, lines=True)
+        labels = set()
+        for c in vocab.columns:
+            if c != "word":
+                vocab[c] = vocab[c] #(vocab[c] - vocab[c].mean()) / vocab[c].std()
+                labels.add(c)
+        self.signal_dicts = {}
+        for l in labels:
+            self.signal_dicts[l] = {w: s for w, s in vocab[["word", l]].values}
         
     
     def _get_signal(self, row):
         signal_dict = self.signal_dicts[row["label"]]
         comment = row["comment"].split(" ")
-        signal = [signal_dict[c] if c in signal_dict else self.NEG_INF for c in comment]
-        signal = ["{:.5f}".format(s) for s in softmax(signal)]
+        signal = ["{:.5f}".format(signal_dict[c])
+                  if c in signal_dict else "0.0" for c in comment]
+        if "fuck" in comment:
+            print(comment, signal)
+            exit()
         return " ".join(signal)
             
     
-    def signal(self):
-        df = pd.read_csv(self.train_dir, sep="\t")
-        vocab = pd.read_json(self.vocab_dir, lines=True)
-        labels = set(df["label"].tolist())
-        self.signal_dicts = {}
-        for l in labels:
-            self.signal_dicts[l] = {w: s for w, s in vocab[vocab[l] > 0][["word", l]].values}
-
+    def signal(self, data_dir):
+        df = pd.read_csv(data_dir, sep="\t")
         df["signal"] = df.apply(self._get_signal, axis=1)
-        df.to_csv(self.train_dir, index=False, sep="\t")
+        df.to_csv(data_dir, index=False, sep="\t")
 
 
 if __name__ == "__main__":
-    DataSignaler().signal()
-    
+    signaler = DataSignaler()
+    signaler.signal(signaler.data_dirs[0])
+    signaler.signal(signaler.data_dirs[1])
+    signaler.signal(signaler.data_dirs[2])
