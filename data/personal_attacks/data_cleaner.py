@@ -30,14 +30,15 @@ def process_comment(row):
         tokens = tokens[:-1]
         if row["rationale"] == row["rationale"]:  # If not NaN.
             row["rationale"] = row["rationale"][:-1]
-    
-    row["comment"] = " ".join(tokens)
 
     # Validity checks.
     if row["rationale"] == row["rationale"]:  # If not NaN.
-        assert len(row["comment"].split(" ")) == len(row["rationale"])
+        assert len(tokens) == len(row["rationale"])
+        row["rationale"] = " ".join(row["rationale"])
     if row["split_y"] == row["split_y"]:  # If not NaN.
         assert row["split_x"] == row["split_y"]
+    
+    row["comment"] = " ".join(tokens)
 
     return row
 

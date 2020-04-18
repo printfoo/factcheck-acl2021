@@ -3,6 +3,7 @@
 
 import os, json
 import pandas as pd
+from scipy.special import softmax
 
 
 class DataSignaler(object):
@@ -13,44 +14,31 @@ class DataSignaler(object):
 
     def __init__(self):
         self.train_dir = "train.tsv"
-        self.vocab_dir = "vocab.json"
-        self.dist_dir = "train_with_word_freq.tsv"
+        self.vocab_dir = os.path.join("linear_bow.analyze", "word_weight.json")
+        self.NEG_INF = -1.0e6
         
-
-    def count_words(self):
-        df = pd.read_csv(self.train_dir, sep="\t")
-        wc = {}
-        for w in " ".join(df["comment"].values).split(" "):
-            if w not in wc:
-                wc[w] = 0
-            wc[w] += 1
-        print(len(wc))
-        wc = {w: c for w, c in wc.items() if c >= 10000}
-        with open(self.vocab_dir, "w") as f:
-            f.write(json.dumps(wc))
+    
+    def _get_signal(self, row):
+        signal_dict = self.signal_dicts[row["label"]]
+        comment = row["comment"].split(" ")
+        signal = [signal_dict[c] if c in signal_dict else self.NEG_INF for c in comment]
+        signal = ["{:.5f}".format(s) for s in softmax(signal)]
+        return " ".join(signal)
             
     
-    def add_word_dist(self):
+    def signal(self):
         df = pd.read_csv(self.train_dir, sep="\t")
-        with open(self.vocab_dir, "r") as f:
-            wc = json.loads(f.read())
-        
-        def word_dist(row):
-            comment = row["comment"].split(" ")
-            for w in wc:
-                row[w] = comment.count(w)
-            return row
-        
-        df = df.apply(word_dist, axis=1)
-        df.to_csv(self.dist_dir, sep="\t")
-            
+        vocab = pd.read_json(self.vocab_dir, lines=True)
+        labels = set(df["label"].tolist())
+        self.signal_dicts = {}
+        for l in labels:
+            self.signal_dicts[l] = {w: s for w, s in vocab[vocab[l] > 0][["word", l]].values}
+
+        df["signal"] = df.apply(self._get_signal, axis=1)
+        print(df)
+        df.to_csv(self.train_dir, index=False, sep="\t")
+
 
 if __name__ == "__main__":
-    datasignaler = DataSignaler()
-    if not os.path.exists(datasignaler.train_dir):
-        print("Please run data_cleaner.py first.")
-    elif not os.path.exists(datasignaler.vocab_dir):
-        DataSignaler().count_words()
-    else:
-        DataSignaler().add_word_dist()
+    DataSignaler().signal()
     
