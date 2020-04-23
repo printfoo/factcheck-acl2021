@@ -51,7 +51,7 @@ def evaluate(model, data, args, set_name):
         # Extend metrics of rationale r to history.
         for a_r, a_r_pred in zip(r, r_pred):
             for metric_name, metric_func in metric_funcs.items():
-                r_history[metric_name].append(metric_func(a_r, a_r_pred.tolist()))
+                r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist()))
 
     # Get metrics for predictions y and rationales r.
     y_metrics = {}
