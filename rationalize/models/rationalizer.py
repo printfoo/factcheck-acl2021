@@ -30,6 +30,9 @@ class Rationalizer(nn.Module):
         self.rationale_len = args.rationale_len
         self.rationale_num = args.rationale_num
         self.vocab_size, self.embedding_dim = embeddings.shape
+        self.guide_by_r = args.rationale_annotation
+        self.guide_by_s = args.linear_signal
+        self.guide_by_d = args.domain_knowledge
 
         # Initialize modules.
         self.embed_layer = self._create_embed_layer(embeddings, bool(args.fine_tuning))
@@ -222,7 +225,7 @@ class Rationalizer(nn.Module):
         return loss_classifier, accuracy_classifier
 
 
-    def train_one_step(self, x, y, m):
+    def train_one_step(self, x, y, m, r, s, d):
         """
         Train one step of the model from x, y and m; and backpropagate errors.
         Inputs:
@@ -232,6 +235,12 @@ class Rationalizer(nn.Module):
                  each element in the batch is an integer representing the label.
             m -- mask m, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
+            r -- rationale annotation r, shape (batch_size, seq_len),
+                 each element is of 0/1 if a word is selected as rationale by human annotators.
+            s -- linear signal s, shape (batch_size, seq_len),
+                 each element is from -1-1 of coefficient of linear regression.
+            d -- domain knowledge d, shape (batch_size, seq_len),
+                 each element is of 0/1 if a word is selected as rationale by domain knowledge.
         Outputs:
             loss_val -- list of losses, [classifier, anti_classifier, tagger].
             predict -- prediction score of classifier, shape (batch_size, |label|),
@@ -285,10 +294,17 @@ def test_rationalizer(args):
     x = Variable(torch.tensor([[1, 3, 3, 2, 2], [2, 1, 3, 1, 0], [3, 1, 2, 0, 0]]))  # (batch_size, seq_len).
     y = Variable(torch.tensor([1, 0, 1]))  # (batch_size,).
     m = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]]))  # (batch_size, seq_len).
+    r = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]]))  # (batch_size, seq_len).
+    s = Variable(torch.tensor([[0.1, 1, -0.1, 0, 0], [1, -0.1, 0, 0, 0], [0, 0, 0.1, 0, 0]]))  # (batch_size, seq_len).
+    d = Variable(torch.tensor([[0, 0, 1, 1, 1], [0, 0, 1, 1, 0], [0, 1, 1, 0, 0]]))  # (batch_size, seq_len).
     if args.cuda:
         x = x.cuda()
         y = y.cuda()
         m = m.cuda()
+        x = x.cuda()
+        r = r.cuda()
+        s = s.cuda()
+        d = d.cuda()
 
-    loss_val, predict, z = model.train_one_step(x, y, m)
+    loss_val, predict, z = model.train_one_step(x, y, m, r, s, d)
     print(loss_val, predict, z)
