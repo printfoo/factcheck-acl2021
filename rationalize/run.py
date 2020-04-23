@@ -44,8 +44,8 @@ if args.mode in {"train", "analyze"}:
     random.seed(args.random_seed)
 
     # Load data.
-    from datasets.dataset_loader import SentenceClassification
-    data = SentenceClassification(args.data_path, train_args)  # Load data.
+    from datasets.dataset_loader import ClassificationDataSet
+    data = ClassificationDataSet(args.data_path, train_args)  # Load data.
     train_args.num_labels = len(data.label_vocab)  # Number of labels.
     print("Data successfully loaded:", data)
 

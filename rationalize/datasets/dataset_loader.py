@@ -6,18 +6,18 @@ import numpy as np
 import pandas as pd
 from colored import fg, attr, bg
 
-from datasets.dataset_operator import SentenceClassificationSet
+from datasets.dataset_operator import ClassificationDataSet
 
 
-class SentenceClassification(object):
+class ClassificationData(object):
     """
-    Generic dataset loader for sentence classification tasks.
+    Generic dataset loader for classification tasks.
     Functions need overwriting for a specific dataset.
     """
 
     def __init__(self, data_path, args):
         """
-        Initialize a dataset for sentence classification:
+        Initialize a dataset for classification:
         Inputs:
             data_path -- the directory of the dataset.
             args.truncate_num -- max length for tokens.
@@ -48,12 +48,11 @@ class SentenceClassification(object):
         """
         Filter the vocabulary and index words.
         This stores:
-            data_set.pairs -- a list of [{"sentence": [wid1, wid2, ...], "label": 1}, ...].
+            data_set.pairs -- a list of [{"tokens": [wid1, wid2, ...], "label": 1}, ...].
         """
         
-        # Add vocab one by one from sentence.
-        def _add_vocab_from_sentence(word_freq_dict, sentence):
-            tokens = sentence.split(" ")
+        # Add vocab one by one from tokens.
+        def _add_vocab_from_tokens(word_freq_dict, tokens):
             word_idx_list = []
             for token in tokens:
                 if word_freq_dict[token] < self.freq_threshold:
@@ -64,15 +63,15 @@ class SentenceClassification(object):
                     word_idx_list.append(self.word_vocab[token])
             return word_idx_list
         
-        # Index words in sentence for training pairs.
+        # Index words in tokens for training pairs.
         def _index_words(word_freq_dict, pairs):
             ret_pair_list = []
             for pair_dict_ in pairs:
                 new_pair_dict_ = {}
                 
                 for k, v in pair_dict_.items():
-                    if k == "sentence":
-                        new_pair_dict_[k] = _add_vocab_from_sentence(word_freq_dict, v)
+                    if k == "tokens":
+                        new_pair_dict_[k] = _add_vocab_from_tokens(word_freq_dict, v)
                     else:
                         new_pair_dict_[k] = pair_dict_[k] 
                 
@@ -89,14 +88,13 @@ class SentenceClassification(object):
         
     def _get_word_freq(self, data_sets_):
         """
-        Build word frequency dictionary from sentence pairs.
+        Build word frequency dictionary from pairs.
         Outputs:
             word_freq_dict -- raw vocabulary.
         """
 
-        # Add vocab one by one from sentence.
-        def _add_freq_from_sentence(word_freq_dict, sentence):
-            tokens = sentence.split(" ")
+        # Add vocab one by one from tokens.
+        def _add_freq_from_tokens(word_freq_dict, tokens):
             for token in tokens:
                 if token not in word_freq_dict:
                     word_freq_dict[token] = 1
@@ -107,8 +105,8 @@ class SentenceClassification(object):
 
         for data_id, data_set in data_sets_.items():
             for pair_dict in data_set.get_pairs():
-                sentence = pair_dict["sentence"]
-                _add_freq_from_sentence(word_freq_dict, sentence)
+                tokens = pair_dict["tokens"]
+                _add_freq_from_tokens(word_freq_dict, tokens)
 
         print("Size of the raw vocabulary:", len(word_freq_dict))
         return word_freq_dict
@@ -122,20 +120,20 @@ class SentenceClassification(object):
         """
 
         # Load instances.
-        self.data_sets[data_set] = SentenceClassificationSet()
-        file_path = os.path.join(self.data_path, data_set + ".tsv")
-        file = pd.read_csv(file_path, sep="\t")
-        file = file.fillna("")
-        for line in file.values:
-            label, tokens, rationale = line
+        self.data_sets[data_set] = ClassificationDataSet()
+        data_path = os.path.join(self.data_path, data_set + ".tsv")
+        df = pd.read_csv(data_path, sep="\t")
+        for _, r in df.iterrows():
+            tokens = r["tokens"].split(" ")
+            label = r["label"]
+            rationale = [float(_) if _ else 0. for _ in r["rationale_annotation"].split(" ")]
+            signal = [float(_) if _ else 0. for _ in r["linear_signal"].split(" ")]
+            domain = [float(_) if _ else 0. for _ in r["domain_knowledge"].split(" ")]
             if label not in self.label_vocab:
                 self.label_vocab[label] = len(self.label_vocab)
             label = self.label_vocab[label]
-            tokens = tokens.split(" ")
-            rationale = [float(r) if r else 0. for r in rationale.split(" ")]
-            self.data_sets[data_set].add_one(tokens,
-                                             label,
-                                             rationale,
+            self.data_sets[data_set].add_one(tokens, label,
+                                             rationale, signal, domain,
                                              self.truncate_num)
 
 
@@ -179,11 +177,9 @@ class SentenceClassification(object):
         """
         Randomly sample a batch to train.
         Inputs:
-            batch_size: an integer for barch size.
+            batch_size -- an integer for barch size.
         Outputs:
-            x_mat -- numpy array in shape of (batch_size, max length of the sequence in the batch).
-            y_vec -- numpy array of binary labels, numpy array in shape of (batch_size,).
-            x_mask -- numpy array in shape of (batch_size, max length of the sequence in the batch).
+            same to self.get_batch().
         """
         set_id = "train"
         data_set = self.data_sets[set_id]
@@ -195,7 +191,7 @@ class SentenceClassification(object):
         """
         Randomly sample a batch to train.
         Inputs:
-            batch_size: an integer for batch size.
+            batch_size -- an integer for batch size.
         Outputs:
             x -- numpy array of input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
@@ -203,39 +199,53 @@ class SentenceClassification(object):
                  only one element per instance 0-|label| pointing to a label.
             m -- numpy array of mask m, shape (batch_size, seq_len).
                  each element in the seq_len is of 0/1 selecting a token or not.
+            r -- numpy array of rationale annotation r, shape (batch_size, seq_len),
+                 each element is of 0/1 if a word is selected as rationale by human annotators.
+            s -- numpy array of linear signal s, shape (batch_size, seq_len),
+                 each element is from -1-1 of coefficient of linear regression.
+            d -- numpy array of domain knowledge d, shape (batch_size, seq_len),
+                 each element is of 0/1 if a word is selected as rationale by domain knowledge.
         """
 
         data_set = self.data_sets[set_id]
-        xs_, ys_, rs_, max_x_len_ = data_set.get_samples_from_ids(batch_idx,
-                                                                  self.truncate_num)
+        samples = data_set.get_samples_from_ids(batch_idx, self.truncate_num)
+        xs_, ys_, rs_, ss_, ds_, max_x_len_ = samples
 
         ms_ = []
         for i, x in enumerate(xs_):
             xs_[i] = xs_[i] + (max_x_len_ - len(xs_[i])) * [0]
             rs_[i] = rs_[i] + (max_x_len_ - len(rs_[i])) * [0]
+            ss_[i] = ss_[i] + (max_x_len_ - len(ss_[i])) * [0]
+            ds_[i] = ds_[i] + (max_x_len_ - len(ds_[i])) * [0]
             ms_.append([1] * len(x) + [0] * (max_x_len_ - len(x)))  # Mask <PAD>.
 
-        x = np.array(xs_, dtype=np.int64)
-        y = np.array(ys_, dtype=np.int64)
-        r = np.array(rs_, dtype=np.int64)
-        m = np.array(ms_, dtype=np.int64)
+        x = np.array(xs_)
+        y = np.array(ys_)
+        m = np.array(ms_)
+        r = np.array(rs_)
+        s = np.array(ss_)
+        d = np.array(ds_)
         
         if sort:  # Sort all according to seq_len.
             x_sort_idx = np.argsort(-np.sum(m, axis=1))
             x = x[x_sort_idx, :]
             y = y[x_sort_idx]
-            r = r[x_sort_idx, :]
             m = m[x_sort_idx, :]
+            r = r[x_sort_idx, :]
+            s = s[x_sort_idx, :]
+            d = d[x_sort_idx, :]
 
-        return x, y, r, m
+        return x, y, m, r, s, d
 
 
     def display_example(self, x, z=None, threshold=0.9):
         """
-        Display sentences and rationales.
+        Display tokens and rationales.
         Inputs:
-            x -- input sequence of word indices, (sequence_length,).
-            z -- input rationale sequence, (sequence_length,).
+            x -- input x, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0-|vocab| pointing to a token.
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
             threshold -- display as rationale if z_i >= threshold.
         """
         condition = z >= threshold
@@ -253,12 +263,11 @@ class SentenceClassification(object):
 def test_data(data_path, args):
     # print(dataloader.word_vocab)
     # print(dataloader.label_vocab)
-    data = SentenceClassification(data_path, args)  # Load data.
+    data = ClassificationData(data_path, args)  # Load data.
     args.num_labels = len(data.label_vocab)  # Number of labels.
-    # x, y, r, m = data.get_train_batch(batch_size=args.batch_size, sort=True)  # Sample a batch.
-    # print(x, y, r, m)
-    x, y, r, m = data.get_batch("dev", batch_idx=range(0, 5), sort=True)
-    print(x, y, r, m)
+    x, y, m, r, s, d = data.get_train_batch(2, True)  # Sample.
+    for _ in (x, y, m, r, s, d):
+        print(_)
     # embeddings = data.initial_embedding("random", 100)  # Load embeddings.
     # embeddings = data.initial_embedding("onehot", 100)  # Load embeddings.
     # print(embeddings)

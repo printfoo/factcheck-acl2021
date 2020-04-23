@@ -23,7 +23,7 @@ class DataSignaler(object):
     
     def _get_signal(self, row):
         signal_dict = self.signal_dicts[row["label"]]
-        comment = row["comment"].split(" ")
+        comment = row["tokens"].split(" ")
         signal = ["{:.5f}".format(signal_dict[c])
                   if c in signal_dict else "0.0" for c in comment]
         return " ".join(signal)
@@ -31,7 +31,7 @@ class DataSignaler(object):
     
     def signal(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
-        df["signal"] = df.apply(self._get_signal, axis=1)
+        df["linear_signal"] = df.apply(self._get_signal, axis=1)
         df.to_csv(data_dir, index=False, sep="\t")
 
 

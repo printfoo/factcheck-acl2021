@@ -38,7 +38,7 @@ def process_comment(row):
     if row["split_y"] == row["split_y"]:  # If not NaN.
         assert row["split_x"] == row["split_y"]
     
-    row["comment"] = " ".join(tokens)
+    row["tokens"] = " ".join(tokens)
 
     return row
 
@@ -84,14 +84,18 @@ class DataCleaner(object):
         # Merge sentence and label.
         df = sentence.merge(label, on="rev_id", how="inner").merge(rationale, on="rev_id", how="left")
         df = df.apply(process_comment, axis=1)
-        df = df.dropna(subset={"comment"})
+        df = df.dropna(subset={"tokens"})
         df["split_y"] = df["split_y"].fillna("train")
         df["label"] = df["attack"].apply(lambda a: "attack" if a >= self.score_threshold else "not_attack")
-        df = df.fillna("")
+        df = df.fillna(" ")
+        df["rationale_annotation"] = df["rationale"]
+        df["linear_signal"] = " "
+        df["domain_knowledge"] = " "
 
         # Save data.
+        selected_cols = ["label", "tokens", "rationale_annotation", "linear_signal", "domain_knowledge"]
         for split in ["train", "dev", "test"]:
-            data = df[df["split_y"] == split][["label", "comment", "rationale"]]
+            data = df[df["split_y"] == split][selected_cols]
             data.to_csv(split + ".tsv", index=False, sep="\t")
 
 
