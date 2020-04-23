@@ -21,20 +21,24 @@ def evaluate(model, data, args, set_name):
     for start in range(instance_count // args.batch_size):
 
         # Get a batch.
-        batch_idx = range(start * args.batch_size,
-                          (start + 1) * args.batch_size)
-        x, y, r, m = data.get_batch(set_name,
-                                    batch_idx=batch_idx,
-                                    sort=True)
+        batch_idx = range(start * args.batch_size, (start + 1) * args.batch_size)
+        samples = data.get_batch(set_name, batch_idx=batch_idx, sort=True)
+        x, y, m, r, s, d = samples
 
         # Save values to torch tensors.
         x = Variable(torch.from_numpy(x))
         y = Variable(torch.from_numpy(y))
         m = Variable(torch.from_numpy(m)).float()
+        r = Variable(torch.from_numpy(r)).float()
+        s = Variable(torch.from_numpy(s)).float()
+        d = Variable(torch.from_numpy(d)).float()
         if args.cuda:
             x = x.cuda()
             y = y.cuda()
             m = m.cuda()
+            r = r.cuda()
+            s = s.cuda()
+            d = d.cuda()
 
         # Get predictions and rationales.
         predict, _, r_pred, _ = model(x, m)
