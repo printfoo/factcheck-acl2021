@@ -17,7 +17,6 @@ class Tagger(nn.Module):
     def __init__(self, args):
         """
         Inputs:
-            args.z_dim -- dimension of rationale, always 2.
             args.hidden_dim -- dimension of hidden states.
             args.model_type -- type of model, RNN/CNN/TRM.
             args.layer_num -- number of layers.
@@ -30,7 +29,7 @@ class Tagger(nn.Module):
         self.NEG_INF = -1.0e6
         encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder, "TRM": TrmEncoder}
         self.encoder = encoders[args.model_type](args)
-        self.predictor = nn.Linear(args.hidden_dim, args.z_dim)
+        self.predictor = nn.Linear(args.hidden_dim, 2)
 
 
     def _binarize_probs(self, z_probs):
