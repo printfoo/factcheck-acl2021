@@ -22,17 +22,39 @@ class Rationalizer(nn.Module):
     def __init__(self, embeddings, args):
         super(Rationalizer, self).__init__()
 
-        # Initialize parameters.
+        # General parameters.
         self.use_cuda = args.cuda
-        self.lambda_sparsity = args.lambda_sparsity
-        self.lambda_continuity = args.lambda_continuity
-        self.lambda_anti = args.lambda_anti
-        self.rationale_len = args.rationale_len
-        self.rationale_num = args.rationale_num
         self.vocab_size, self.embedding_dim = embeddings.shape
-        self.guide_by_r = args.rationale_annotation
-        self.guide_by_s = args.linear_signal
-        self.guide_by_d = args.domain_knowledge
+
+        # Whether and how much to use linear signal to guide rationale selection.
+        if bool(args.linear_signal):
+            self.lambda_s = args.lambda_s
+        else:
+            self.lambda_s = 0
+
+        # Whether and how much to use domain knowledge to guide rationale selection.
+        if bool(args.domain_knowledge):
+            self.lambda_d = args.lambda_d
+        else:
+            self.lambda_d = 0
+
+        # Whether and how much to use anti_predictor to limit unselected rationales.
+        if bool(args.anti_predictor):
+            self.lambda_anti = args.lambda_anti
+        else:
+            self.lambda_anti = 0
+
+        # Whether and how much to use regulation on rationale selection.
+        if bool(args.rationale_regulation):
+            self.lambda_sparsity = args.lambda_sparsity
+            self.lambda_continuity = args.lambda_continuity
+            self.rationale_len = args.rationale_len
+            self.rationale_num = args.rationale_num
+        else:
+            self.lambda_sparsity = 0
+            self.lambda_continuity = 0
+            self.rationale_len = 0
+            self.rationale_num = 0
 
         # Initialize modules.
         self.embed_layer = self._create_embed_layer(embeddings, bool(args.fine_tuning))
