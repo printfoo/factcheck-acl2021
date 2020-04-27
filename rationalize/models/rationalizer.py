@@ -23,6 +23,7 @@ class Rationalizer(nn.Module):
         super(Rationalizer, self).__init__()
 
         # General parameters.
+        self.NEG_INF = -1.0e6
         self.use_cuda = args.cuda
         self.vocab_size, self.embedding_dim = embeddings.shape
 
@@ -195,7 +196,15 @@ class Rationalizer(nn.Module):
             loss_s -- loss for linear signal, shape (batch_size,),
         """
 
-        return 0
+        s = s + (1 - m) * self.NEG_INF
+        s_all = s.view(-1, 1)
+        s_scores_all = torch.cat((-s_all, s_all), dim=1)
+
+        z_all = z.view(-1).long()
+        loss_s_all = self.loss_func(s_scores_all, z_all)
+        loss_s_raw = loss_s_all.view(z.size(0), z.size(1))
+        loss_s = torch.mean(loss_s_raw, dim=1)
+        return loss_s
 
 
     def _get_regularization_loss(self, z, m=None):

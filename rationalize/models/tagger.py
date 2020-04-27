@@ -47,7 +47,7 @@ class Tagger(nn.Module):
         # Reshape z_probs by concatenating all batches,
         # (batch_size, seq_len, 2) -> (batch_size * seq_len, 2)
         z_probs_all = z_probs.view(-1, 2)
-
+        
         # Create a categorical distribution parameterized by concatenated probs.
         sampler = torch.distributions.Categorical(z_probs_all)
 
