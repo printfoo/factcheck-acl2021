@@ -38,7 +38,7 @@ class Rationalizer(nn.Module):
         else:
             self.lambda_d = 0
 
-        # Whether and how much to use anti_predictor to limit unselected rationales.
+        # Whether and how much to use an anti predictor to limit rationale selection.
         if bool(args.anti_predictor):
             self.lambda_anti = args.lambda_anti
         else:
@@ -127,7 +127,7 @@ class Rationalizer(nn.Module):
     
 
     def _get_tagger_loss(self, accuracy_classifier, accuracy_anti_classifier,
-                         loss_continuity, loss_sparsity, z, neg_log_probs, m):
+                         loss_continuity, loss_sparsity, loss_s, z, neg_log_probs, m):
         """
         Get reinforce-style loss for tagger.
         Inputs:
@@ -136,6 +136,7 @@ class Rationalizer(nn.Module):
             accuracy_anti_classifier -- accuracy of the anti_classifier, shape (batch_size,),
             loss_continuity -- loss for continuity, shape (batch_size,),
             sparsity_loss -- loss for sparsity, shape (batch_size,),
+            loss_s -- loss for linear signal, shape (batch_size,),
             z -- selected rationale, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
@@ -156,7 +157,8 @@ class Rationalizer(nn.Module):
         rewards = (accuracy_classifier
                    - accuracy_anti_classifier * self.lambda_anti
                    - loss_continuity * self.lambda_continuity 
-                   - loss_sparsity * self.lambda_sparsity)
+                   - loss_sparsity * self.lambda_sparsity
+                   - loss_s * self.lambda_s)
 
         # Update mean loss of this batch to the history reward queue.
         self.history_rewards.append(torch.mean(rewards).item())
@@ -177,6 +179,23 @@ class Rationalizer(nn.Module):
         loss_tagger = torch.sum(neg_log_probs * advantages * m)
 
         return loss_tagger
+
+
+    def _get_linear_signal_loss(self, z, s, m=None):
+        """
+        Get regularization loss of rationale selection.
+        Inputs:
+            z -- selected rationale, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+            s -- linear signal s, shape (batch_size, seq_len),
+                 each element is from -1-1 of coefficient of linear regression.
+            m -- mask m, shape (batch_size, seq_len),
+                 each element in the seq_len is of 0/1 selecting a token or not.
+        Outputs:
+            loss_s -- loss for linear signal, shape (batch_size,),
+        """
+
+        return 0
 
 
     def _get_regularization_loss(self, z, m=None):
@@ -281,9 +300,15 @@ class Rationalizer(nn.Module):
         # Get regularization loss for tagged rationales.
         loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
 
+        # Get linear signal loss for tagged rationales.
+        if self.lambda_s:
+            loss_s = self._get_linear_signal_loss(z, s, m)
+        else:
+            loss_s = 0
+
         # Get reinforce-style loss for tagger.
         loss_tagger = self._get_tagger_loss(accuracy_classifier, accuracy_anti_classifier,
-                                            loss_continuity, loss_sparsity,
+                                            loss_continuity, loss_sparsity, loss_s,
                                             z, neg_log_probs, m)
 
         # Backpropagate losses.

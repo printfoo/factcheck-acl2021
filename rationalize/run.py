@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="rationalizer_trm",
+parser.add_argument("--config_name", type=str, default="rationalizer_trm_s",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
@@ -90,9 +90,9 @@ if args.mode in {"train", "analyze"}:
 elif args.mode == "test":
     
     # Test data.
-    from datasets.dataset_loader import test_data
-    test_data(args.data_path, train_args)
-    print("Model successfully tested:", args.data_name)
+    # from datasets.dataset_loader import test_data
+    # test_data(args.data_path, train_args)
+    # print("Model successfully tested:", args.data_name)
     
     # Test model.
     test_model = getattr(importlib.import_module("models." + train_args.model_name),
