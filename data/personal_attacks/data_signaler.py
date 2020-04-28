@@ -14,13 +14,16 @@ class DataSignaler(object):
     def __init__(self):
         self.data_dirs = ["train.tsv", "dev.tsv", "test.tsv"]
         self.vocab_dir = os.path.join("linear_bow.analyze", "word_weight.json")
-        self.NEG_INF = -1.0e6
         vocab = pd.read_json(self.vocab_dir, lines=True)
         self.signal_dicts = {}
         for l in set(vocab.columns) - {"word"}:
             self.signal_dicts[l] = {w: s for w, s in vocab[["word", l]].values}
-        
+            print(l, "fuck", self.signal_dicts[l]["fuck"])
+        signal_sorted = sorted(self.signal_dicts[l].items(), key=lambda _: abs(_[1]))
+        threshold = signal_sorted[int(len(signal_sorted) * -0.05)][1]
+        print("Threshold:", threshold)
     
+
     def _get_signal(self, row):
         signal_dict = self.signal_dicts[row["label"]]
         comment = row["tokens"].split(" ")
