@@ -199,7 +199,7 @@ class Rationalizer(nn.Module):
         s = s + (1 - m) * self.NEG_INF
         s_all = s.view(-1, 1)
         s_scores_all = torch.cat((-s_all, s_all), dim=1)
-
+        
         z_all = z.view(-1).long()
         loss_s_all = self.loss_func(s_scores_all, z_all)
         loss_s_raw = loss_s_all.view(z.size(0), z.size(1))

@@ -48,11 +48,11 @@ class DataCleaner(object):
     Dataset cleaner for personal attacks.
     """
 
-    def __init__(self, data_dir="raw", score_threshold=0.3):
+    def __init__(self, data_dir="raw", score_threshold=0.5):
         """
         Inputs:
             data_dir -- the directory of the dataset.
-            score_threshold -- the threshold (0-1) for pos/neg.
+            score_threshold -- the threshold (0-1) for pos/neg, 0.5 in the original paper.
         """
         self.data_dir = data_dir
         self.score_threshold = score_threshold

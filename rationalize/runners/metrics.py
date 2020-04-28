@@ -8,21 +8,21 @@ def accuracy(true, pred):
     return accuracy_score(true, pred)
 
 
-def precision(true, pred):
+def precision(true, pred, average="macro"):
     if sum(pred) == 0:
         return 0
-    return precision_score(true, pred, average="binary")
+    return precision_score(true, pred, average=average)
 
 
-def recall(true, pred):
+def recall(true, pred, average="macro"):
     if sum(true) == 0:
         return 0
-    return recall_score(true, pred, average="binary")
+    return recall_score(true, pred, average=average)
 
 
-def f1(true, pred):
+def f1(true, pred, average="macro"):
     if sum(true) == 0 or sum(pred) == 0:
         return 0
-    return f1_score(true, pred, average="binary")
+    return f1_score(true, pred, average=average)
 
 

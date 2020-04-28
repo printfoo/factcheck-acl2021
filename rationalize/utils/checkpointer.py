@@ -6,16 +6,16 @@ import numpy as np
 
 
 # Find the best checkpoint.
-def find_best_ckpt(path, metric="accuracy", by="dev"):
+def find_best_ckpt(path, metric="f1", by="dev"):
     if not os.path.exists(path):
         return "[Checkpoints not found.]"
-    with open(os.path.join(path, metric + ".json"), "r") as f:
-        metric = json.load(f)
+    with open(os.path.join(path, "record.json"), "r") as f:
+        record = json.load(f)
     ckpts = [f for f in os.listdir(path) if f.endswith(".pt")]
     ckpts.sort()
-    if len(metric[by]) != len(ckpts):
+    if len(record[by]) != len(ckpts):
         return "[Checkpoints unexpected error.]"
-    best_ckpt_index = np.argmax(metric[by])
+    best_ckpt_index = np.argmax([_["prediction"][metric] for _ in record[by]])
     best_ckpt_path = os.path.join(path, ckpts[best_ckpt_index])
     return best_ckpt_path
 

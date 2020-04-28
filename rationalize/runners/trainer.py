@@ -19,8 +19,7 @@ def train(model, data, args):
     print("Using GPU:", torch.cuda.current_device())
 
     # Initialize records.
-    accs = {"name": "accuracy", "train": [], "dev": [], "test": []}
-    tmp_acc = 0.0
+    metrics_records = {"dev": [], "test": []}
 
     # Start training iterations.
     for i in tqdm(range(args.num_iteration + 1)):
@@ -47,10 +46,6 @@ def train(model, data, args):
         # Train one step.
         losses, predict, z = model.train_one_step(x, y, m, r, s, d)
 
-        # Evaluate classification accuracy.
-        _, y_pred = torch.max(predict, dim=1)
-        tmp_acc += accuracy(y.tolist(), y_pred.tolist())
-
         # Display every args.display_iteration.
         if args.display_iteration and i % args.display_iteration == 0:
             y_ = y[2]
@@ -67,22 +62,19 @@ def train(model, data, args):
         if args.eval_iteration and i % args.eval_iteration == 0:
 
             # Eval dev set.
-            metrics, _ = evaluate(model, data, args, "dev")
-            accs["dev"].append(metrics["accuracy"])
+            metrics = evaluate(model, data, args, "dev")
+            print(metrics)
+            metrics_records["dev"].append(metrics)
 
             # Eval test set.
-            metrics, _ = evaluate(model, data, args, "test")
-            accs["test"].append(metrics["accuracy"])
-
-            # Adds train set metrics.
-            accs["train"].append(tmp_acc / args.eval_iteration)
-            tmp_acc = 0.0
+            metrics = evaluate(model, data, args, "test")
+            print(metrics)
+            metrics_records["test"].append(metrics)
 
             # Save checkpoint.
             snapshot_path = os.path.join(args.working_dir, "i_{:05d}.pt".format(i))
             torch.save(model, snapshot_path)
 
-
-    record_path = os.path.join(args.working_dir, accs["name"] + ".json")
+    record_path = os.path.join(args.working_dir, "record.json")
     with open(record_path, "w") as f:
-        f.write(json.dumps(accs))
+        f.write(json.dumps(metrics_records))

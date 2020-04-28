@@ -60,7 +60,4 @@ def evaluate(model, data, args, set_name):
         y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"])
         r_metrics[metric_name] = np.mean(r_history[metric_name])
     
-    print(set_name)
-    print(y_metrics)
-    print(r_metrics)
-    return y_metrics, r_metrics
+    return {"prediction": y_metrics, "rationale": r_metrics}
