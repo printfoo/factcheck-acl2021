@@ -3,7 +3,7 @@
 __pycache__
 
 # NFS.
-.nfs*
+# .nfs*
 
 # MacOS.
 .DS_Store
