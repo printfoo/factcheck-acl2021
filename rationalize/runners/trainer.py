@@ -49,6 +49,7 @@ def train(model, data, args):
         # Display every args.display_iteration.
         if args.display_iteration and i % args.display_iteration == 0:
             y_ = y[2]
+            y_pred = torch.max(predict, dim=1)[1]
             pred_ = y_pred.data[2]
             x_ = x[2,:]
             z_ = z.data[2,:]

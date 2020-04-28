@@ -51,13 +51,15 @@ def evaluate(model, data, args, set_name):
         # Extend metrics of rationale r to history.
         for a_r, a_r_pred in zip(r, r_pred):
             for metric_name, metric_func in metric_funcs.items():
-                r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist()))
+                r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist(),
+                                                          average="binary"))
 
     # Get metrics for predictions y and rationales r.
     y_metrics = {}
     r_metrics = {}
     for metric_name, metric_func in metric_funcs.items():
-        y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"])
+        y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"],
+                                             average="macro")
         r_metrics[metric_name] = np.mean(r_history[metric_name])
     
     return {"prediction": y_metrics, "rationale": r_metrics}

@@ -4,7 +4,7 @@
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
-def accuracy(true, pred):
+def accuracy(true, pred, average=None):
     return accuracy_score(true, pred)
 
 

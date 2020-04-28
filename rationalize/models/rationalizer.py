@@ -184,7 +184,7 @@ class Rationalizer(nn.Module):
 
     def _get_linear_signal_loss(self, z, s, m=None):
         """
-        Get regularization loss of rationale selection.
+        Get linear signal loss of rationale selection.
         Inputs:
             z -- selected rationale, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.

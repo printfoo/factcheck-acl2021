@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="linear_bow",
+parser.add_argument("--config_name", type=str, default="rationalizer_trm_s",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
