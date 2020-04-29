@@ -60,6 +60,6 @@ def evaluate(model, data, args, set_name):
     for metric_name, metric_func in metric_funcs.items():
         y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"],
                                              average="macro")
-        r_metrics[metric_name] = np.mean(r_history[metric_name])
+        r_metrics[metric_name] = np.nanmean(r_history[metric_name])
     
     return {"prediction": y_metrics, "rationale": r_metrics}

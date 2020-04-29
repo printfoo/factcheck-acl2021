@@ -36,7 +36,7 @@ class DataEvaluator(object):
     
     def evaluate(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
-        df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.2) for _ in s.split()])
+        df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.25) for _ in s.split()])
         df["rationale_annotation"] = df["rationale_annotation"].apply(lambda r: [int(_) for _ in r.split()])
         df = df.apply(get_metrics, axis=1)
         print(df.mean())

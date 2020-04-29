@@ -20,8 +20,8 @@ class DataSignaler(object):
             self.signal_dicts[l] = {w: s for w, s in vocab[["word", l]].values}
             print(l, "fuck", self.signal_dicts[l]["fuck"])
         signal_sorted = sorted(self.signal_dicts[l].items(), key=lambda _: abs(_[1]))
-        threshold = signal_sorted[int(len(signal_sorted) * -0.05)][1]
-        print("Threshold:", threshold)
+        threshold = signal_sorted[int(len(signal_sorted) * -0.01):]
+        print("Threshold:", threshold[0][1])
     
 
     def _get_signal(self, row):
