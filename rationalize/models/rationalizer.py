@@ -308,7 +308,7 @@ class Rationalizer(nn.Module):
         
         # Get regularization loss for tagged rationales.
         loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
-
+        
         # Get linear signal loss for tagged rationales.
         if self.lambda_s:
             loss_s = self._get_linear_signal_loss(z, s, m)
