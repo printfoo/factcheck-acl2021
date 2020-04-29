@@ -8,7 +8,7 @@ import pandas as pd
 class DataSignaler(object):
     """
     Dataset signaler for personal attacks.
-    Add signals to train.tsv.
+    Add signals to train.tsv, dev.tsv and test.tsv.
     """
 
     def __init__(self):
