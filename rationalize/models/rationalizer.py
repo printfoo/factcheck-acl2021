@@ -30,8 +30,10 @@ class Rationalizer(nn.Module):
         # Whether and how much to use linear signal to guide rationale selection.
         if bool(args.linear_signal):
             self.lambda_s = args.lambda_s
+            self.threshold_s = args.threshold_s
         else:
             self.lambda_s = 0
+            self.threshold_s = 0
 
         # Whether and how much to use domain knowledge to guide rationale selection.
         if bool(args.domain_knowledge):
@@ -122,22 +124,25 @@ class Rationalizer(nn.Module):
         
         # Prediction of anti classifier,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
-        anti_predict = self.anti_classifier(embeddings, 1 - z, m)
+        if self.lambda_anti:
+            anti_predict = self.anti_classifier(embeddings, 1 - z, m)
+        else:
+            anti_predict = None
 
         return predict, anti_predict, z, neg_log_probs
     
 
-    def _get_tagger_loss(self, accuracy_classifier, accuracy_anti_classifier,
-                         loss_continuity, loss_sparsity, loss_s, z, neg_log_probs, m):
+    def _get_tagger_loss(self, reward_classifier, reward_anti_classifier, reward_s,
+                         loss_continuity, loss_sparsity, z, neg_log_probs, m):
         """
         Get reinforce-style loss for tagger.
         Inputs:
-            accuracy_classifier -- accuracy of the classifier, shape (batch_size,),
+            reward_classifier -- accuracy of the classifier, shape (batch_size,),
                                    each element at i is of 0/1 for incorrect/correct prediction.
-            accuracy_anti_classifier -- accuracy of the anti_classifier, shape (batch_size,),
+            reward_anti_classifier -- accuracy of the anti_classifier, shape (batch_size,),
+            reward_s -- reward of z comparing to linear signal s, shape (batch_size,),
             loss_continuity -- loss for continuity, shape (batch_size,),
             sparsity_loss -- loss for sparsity, shape (batch_size,),
-            loss_s -- loss for linear signal, shape (batch_size,),
             z -- selected rationale, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
@@ -155,11 +160,11 @@ class Rationalizer(nn.Module):
 
         # Reinforce-style loss for this batch,
         # (batch_size,) -> (batch_size,).
-        rewards = (accuracy_classifier
-                   - accuracy_anti_classifier * self.lambda_anti
+        rewards = (reward_classifier
+                   - reward_anti_classifier * self.lambda_anti
                    - loss_continuity * self.lambda_continuity 
                    - loss_sparsity * self.lambda_sparsity
-                   - loss_s * self.lambda_s)
+                   + reward_s * self.lambda_s)
 
         # Update mean loss of this batch to the history reward queue.
         self.history_rewards.append(torch.mean(rewards).item())
@@ -182,29 +187,23 @@ class Rationalizer(nn.Module):
         return loss_tagger
 
 
-    def _get_linear_signal_loss(self, z, s, m=None):
+    def _get_guidance_reward(self, z, ref):
         """
-        Get linear signal loss of rationale selection.
+        Get guidance reward of rationale selection.
         Inputs:
             z -- selected rationale, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
-            s -- linear signal s, shape (batch_size, seq_len),
-                 each element is from -1-1 of coefficient of linear regression.
-            m -- mask m, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+            ref -- reference for rationale selection, shape (batch_size, seq_len),
+                   each element is of 0/1 selecting a token or not,
+                   this reference could be linear signal s or domain knowledge d.
         Outputs:
-            loss_s -- loss for linear signal, shape (batch_size,),
+            reward -- reward of z comparing to ref, shape (batch_size,),
         """
 
-        s = s + (1 - m) * self.NEG_INF
-        s_all = s.view(-1, 1)
-        s_scores_all = torch.cat((-s_all, s_all), dim=1)
-        
-        z_all = z.view(-1).long()
-        loss_s_all = self.loss_func(s_scores_all, z_all)
-        loss_s_raw = loss_s_all.view(z.size(0), z.size(1))
-        loss_s = torch.mean(loss_s_raw, dim=1)
-        return loss_s
+        # Get accuracy of rationale selection comparing to reference as reward,
+        # (batch_size, seq_len) -> (batch_size,)
+        reward = torch.mean((z == ref).float(), dim=1)
+        return reward
 
 
     def _get_regularization_loss(self, z, m=None):
@@ -258,8 +257,8 @@ class Rationalizer(nn.Module):
         Outputs:
             loss_classifier -- loss of the classifier, shape (1,),
                                a scala averages the loss of this batch.
-            accuracy_classifier -- accuracy of the classifier, shape (batch_size,),
-                                   each element at i is of 0/1 for incorrect/correct prediction.
+            reward_classifier -- reward of the classifier, shape (batch_size,),
+                                 each element at i is of 0/1 for incorrect/correct prediction.
         """
 
         # Get loss of the classifier for the entire batch,
@@ -268,11 +267,9 @@ class Rationalizer(nn.Module):
         
         # Get accuracy of the classifier for each input, 
         # (batch_size,) -> (batch_size,)
-        accuracy_classifier = (torch.max(predict, dim=1)[1] == y).float()
-        if self.use_cuda:
-            accuracy_classifier = accuracy_classifier.cuda()
+        reward_classifier = (torch.max(predict, dim=1)[1] == y).float()
         
-        return loss_classifier, accuracy_classifier
+        return loss_classifier, reward_classifier
 
 
     def train_one_step(self, x, y, m, r, s, d):
@@ -303,26 +300,32 @@ class Rationalizer(nn.Module):
         predict, anti_predict, z, neg_log_probs = self.forward(x, m)
 
         # Get loss and accuracy for classifier and anti-classifier.
-        loss_classifier, accuracy_classifier = self._get_classifier_loss(predict, y)
-        loss_anti_classifier, accuracy_anti_classifier = self._get_classifier_loss(anti_predict, y)
+        loss_classifier, reward_classifier = self._get_classifier_loss(predict, y)
+        if self.lambda_anti:
+            loss_anti_classifier, reward_anti_classifier = self._get_classifier_loss(anti_predict, y)
+        else:
+            loss_anti_classifier, reward_anti_classifier = 0, 0
         
         # Get regularization loss for tagged rationales.
         loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
         
-        # Get linear signal loss for tagged rationales.
+        # Get linear signal reward for tagged rationales.
         if self.lambda_s:
-            loss_s = self._get_linear_signal_loss(z, s, m)
+            s = (s >= self.threshold_s).float()  # Binary.
+            reward_s = self._get_guidance_reward(z, s)
         else:
-            loss_s = 0
+            reward_s = 0
 
         # Get reinforce-style loss for tagger.
-        loss_tagger = self._get_tagger_loss(accuracy_classifier, accuracy_anti_classifier,
-                                            loss_continuity, loss_sparsity, loss_s,
-                                            z, neg_log_probs, m)
+        loss_tagger = self._get_tagger_loss(reward_classifier, reward_anti_classifier, reward_s,
+                                            loss_continuity, loss_sparsity, z, neg_log_probs, m)
 
         # Backpropagate losses.
-        losses = [loss_classifier, loss_anti_classifier, loss_tagger]
-        opts = [self.opt_classifier, self.opt_anti_classifier, self.opt_tagger]
+        losses = [loss_classifier, loss_tagger]
+        opts = [self.opt_classifier, self.opt_tagger]
+        if self.lambda_anti:
+            losses.append(loss_anti_classifier)
+            opts.append(self.opt_anti_classifier)
         loss_val = []
         for loss, opt in zip(losses, opts):
             loss.backward()

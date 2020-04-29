@@ -55,7 +55,7 @@ class Classifier(nn.Module):
         hiddens = self.encoder(rationales, m)
 
         # Get max hidden of a sequence from hiddens,
-        # Here hiddens are masked by rationale selection z again,
+        # Here hiddens are masked by rationale selection z again (m * z),
         # (batch_size, hidden_dim, seq_len) -> (batch_size, hidden_dim)
         max_hidden = torch.max(hiddens + (1 - m * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
 
