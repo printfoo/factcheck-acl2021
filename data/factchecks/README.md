@@ -1,13 +1,13 @@
 # FactChecks Dataset.
 
-Download raw dataset at:
+Download raw dataset to the `/raw` folder:
 ```
 https://raw.githubusercontent.com/printfoo/misinfo-cscw2018/master/public_data/snopes.tsv
 ```
 
-Clean data *at this directory*:
+Clean data at this directory `.`:
 ```
-python data_cleaner.py
+$ python data_cleaner.py
 ```
 
 The dataset was originally released by:  
