@@ -10,7 +10,7 @@ https://raw.githubusercontent.com/shcarton/rcnn/master/deliberativeness/data/pro
 
 Clean data at this directory `.`:
 ```
-python data_cleaner.py
+$ python data_cleaner.py
 ```
 
 Download abusive word lexicon to the `/raw` folder:
@@ -20,7 +20,7 @@ https://raw.githubusercontent.com/uds-lsv/lexicon-of-abusive-words/master/Lexico
 
 Add linear siganl and domain knowledge at this directory `.`:
 ```
-python data_signaler.py
+$ python data_signaler.py
 ```
 
 The dataset was originally released by:  
