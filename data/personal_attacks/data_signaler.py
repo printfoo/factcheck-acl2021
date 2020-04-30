@@ -8,11 +8,13 @@ import pandas as pd
 class DataSignaler(object):
     """
     Dataset signaler for personal attacks.
-    Add signals to train.tsv, dev.tsv and test.tsv.
+    Add linear signal and domain knowledge to train.tsv, dev.tsv and test.tsv.
     """
 
     def __init__(self):
         self.data_dirs = ["train.tsv", "dev.tsv", "test.tsv"]
+        
+        # Linear signal
         self.vocab_dir = os.path.join("linear_bow.analyze", "word_weight.json")
         vocab = pd.read_json(self.vocab_dir, lines=True)
         self.signal_dicts = {}
@@ -22,19 +24,32 @@ class DataSignaler(object):
         signal_sorted = sorted(self.signal_dicts[l].items(), key=lambda _: abs(_[1]))
         threshold = signal_sorted[int(len(signal_sorted) * -0.01):]
         print("Threshold:", threshold[0][1])
+        
+        # Domain knowledge.
+        self.vocab_dir = os.path.join("raw", "baseLexicon.txt")
+        with open(self.vocab_dir, "r") as f:
+            vocab = f.read().strip().lower().split("\n")
+        self.domain_set = {_.split("\t")[0].split("_")[0] for _ in vocab if _.split("\t")[1] == "true"}
     
 
     def _get_signal(self, row):
         signal_dict = self.signal_dicts[row["label"]]
-        comment = row["tokens"].split(" ")
-        signal = ["{:.5f}".format(signal_dict[c])
-                  if c in signal_dict else "0.0" for c in comment]
+        tokens = row["tokens"].split(" ")
+        signal = ["{:.5f}".format(signal_dict[t])
+                  if t in signal_dict else "0.0" for t in tokens]
         return " ".join(signal)
-            
+
+    
+    def _get_domain(self, row):
+        tokens = row["tokens"].split(" ")
+        domain = ["1" if t in self.domain_set else "0" for t in tokens]
+        return " ".join(domain)
+    
     
     def signal(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
         df["linear_signal"] = df.apply(self._get_signal, axis=1)
+        df["domain_knowledge"] = df.apply(self._get_domain, axis=1)
         df.to_csv(data_dir, index=False, sep="\t")
 
 
