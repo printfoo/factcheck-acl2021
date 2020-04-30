@@ -1,6 +1,6 @@
 # GloVe Embeddings.
 
-Download pre-trained embeddings at:
+Download pre-trained embeddings and unzip at this directory `.`:
 ```
 http://nlp.stanford.edu/data/glove.6B.zip
 ```
