@@ -4,15 +4,15 @@
 
 Download and clean data:
 ```
-cd data/[DATASET]/raw
-./download.sh
-cd ..
-python data_cleaner.py
+$ cd data/[DATASET]/raw
+$ ./download.sh
+$ cd ..
+$ python data_cleaner.py
 ```
 
 Train a model:
 ```
-python rationalize/run.py [PARAMS]
+$ python rationalize/run.py [PARAMS]
 ```
 
 ## References.
