@@ -23,6 +23,11 @@ Add linear siganl and domain knowledge at this directory `.`:
 $ python data_signaler.py
 ```
 
+Evaluate linear siganl and domain knowledge based rationales:
+```
+$ python data_evaluator.py
+```
+
 The dataset was originally released by:  
 - Ellery Wulczyn, Nithum Thain, Lucas Dixon, **Ex Machina: Personal Attacks Seen at Scale**, *WWW 2017* (https://figshare.com/articles/Wikipedia_Talk_Labels_Personal_Attacks/4054689).
 
