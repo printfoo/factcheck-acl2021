@@ -132,7 +132,7 @@ class Rationalizer(nn.Module):
         return predict, anti_predict, z, neg_log_probs
     
 
-    def _get_tagger_loss(self, reward_classifier, reward_anti_classifier, reward_s,
+    def _get_tagger_loss(self, reward_classifier, reward_anti_classifier, reward_s, reward_d,
                          loss_continuity, loss_sparsity, z, neg_log_probs, m):
         """
         Get reinforce-style loss for tagger.
@@ -141,6 +141,7 @@ class Rationalizer(nn.Module):
                                    each element at i is of 0/1 for incorrect/correct prediction.
             reward_anti_classifier -- accuracy of the anti_classifier, shape (batch_size,),
             reward_s -- reward of z comparing to linear signal s, shape (batch_size,),
+            reward_d -- reward of z comparing to domain knowledge d, shape (batch_size,),
             loss_continuity -- loss for continuity, shape (batch_size,),
             sparsity_loss -- loss for sparsity, shape (batch_size,),
             z -- selected rationale, shape (batch_size, seq_len),
@@ -164,7 +165,8 @@ class Rationalizer(nn.Module):
                    - reward_anti_classifier * self.lambda_anti
                    - loss_continuity * self.lambda_continuity 
                    - loss_sparsity * self.lambda_sparsity
-                   + reward_s * self.lambda_s)
+                   + reward_s * self.lambda_s
+                   + reward_d * self.lambda_d)
 
         # Update mean loss of this batch to the history reward queue.
         self.history_rewards.append(torch.mean(rewards).item())
@@ -295,7 +297,7 @@ class Rationalizer(nn.Module):
             z -- selected rationale, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         """
-
+        
         # Forward model and get rationales, predictions, etc.
         predict, anti_predict, z, neg_log_probs = self.forward(x, m)
 
@@ -316,8 +318,14 @@ class Rationalizer(nn.Module):
         else:
             reward_s = 0
 
+        # Get domain knowledge reward for tagged rationales.
+        if self.lambda_d:
+            reward_d = self._get_guidance_reward(z, d)
+        else:
+            reward_d = 0
+
         # Get reinforce-style loss for tagger.
-        loss_tagger = self._get_tagger_loss(reward_classifier, reward_anti_classifier, reward_s,
+        loss_tagger = self._get_tagger_loss(reward_classifier, reward_anti_classifier, reward_s, reward_d,
                                             loss_continuity, loss_sparsity, z, neg_log_probs, m)
 
         # Backpropagate losses.
