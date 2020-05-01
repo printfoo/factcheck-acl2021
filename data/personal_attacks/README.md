@@ -31,7 +31,7 @@ $ python data_evaluator.py
 The dataset was originally released by:  
 - Ellery Wulczyn, Nithum Thain, Lucas Dixon, **Ex Machina: Personal Attacks Seen at Scale**, *WWW 2017* (https://figshare.com/articles/Wikipedia_Talk_Labels_Personal_Attacks/4054689).
 
-Additional rationale annotations and part of data cleaning script was developed by:
+Rationale annotations and part of data cleaning script was released by:
 - Samuel Carton, Qiaozhu Mei, Paul Resnick, **Extractive Adversarial Networks: High-Recall Explanations for Identifying Personal Attacks in Social Media Posts**, *EMNLP 2018* (https://github.com/shcarton/rcnn).
 
 The lexicon was released by:
