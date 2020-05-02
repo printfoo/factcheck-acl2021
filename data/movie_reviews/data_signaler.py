@@ -8,7 +8,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 class DataSignaler(object):
     """
-    Dataset signaler for personal attacks.
+    Dataset signaler for movie reviewss.
     Add linear signal and domain knowledge to train.tsv, dev.tsv and test.tsv.
     """
 
@@ -27,10 +27,14 @@ class DataSignaler(object):
         print("Threshold:", threshold[0][1])
         
         # Domain knowledge.
-        self.vocab_dir = os.path.join("raw", "baseLexicon.txt")
+        self.vocab_dir = os.path.join("raw", "NRC-Emotion-Lexicon-v0.92",
+                                      "NRC-Emotion-Lexicon-Wordlevel-v0.92.txt")
         with open(self.vocab_dir, "r") as f:
             vocab = f.read().strip().lower().split("\n")
-        self.domain_set = {_.split("\t")[0].split("_")[0] for _ in vocab if _.split("\t")[1] == "true"}
+        vocab = [_.split("\t") for _ in vocab]
+        self.domain_dicts = {}
+        for l in self.signal_dicts:
+            self.domain_dicts[l] = {_[0] for _ in vocab if _[1] == l and _[2] == "1"}
     
 
     def _get_signal(self, row):
@@ -46,7 +50,12 @@ class DataSignaler(object):
         tokens = [wnl.lemmatize(token, "n") for token in tokens] # lemmatization nouns.
         tokens = [wnl.lemmatize(token, "v") for token in tokens] # lemmatization verbs.
         tokens = [wnl.lemmatize(token, "a") for token in tokens] # lemmatization adjectives.
-        domain = ["1" if t in self.domain_set else "0" for t in tokens]
+        domain_dict = self.domain_dicts[row["label"]]
+        not_label = (self.domain_dicts.keys() - {row["label"]}).pop()
+        not_domain_dict = self.domain_dicts[not_label]
+        domain = ["1" if t in domain_dict else
+                  ("-1" if t in not_domain_dict else "0")
+                  for t in tokens]
         return " ".join(domain)
 
     

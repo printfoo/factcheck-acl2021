@@ -36,25 +36,27 @@ class DataEvaluator(object):
     
     def evaluate(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
-        df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.251) for _ in s.split()])
-        df["domain_knowledge"] = df["domain_knowledge"].apply(lambda r: [int(_) for _ in r.split()])
+        df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.128) for _ in s.split()])
+        df["domain_knowledge"] = df["domain_knowledge"].apply(lambda d: [int(_) for _ in d.split()])
+        df["domain_knowledge_max"] = df["domain_knowledge"].apply(lambda d: [max(_, 0) for _ in d])
         df["rationale_annotation"] = df["rationale_annotation"].apply(lambda r: [int(_) for _ in r.split()])
         print("Rationale evaluation for:", data_dir)
-        for pred_col in ["linear_signal", "domain_knowledge"]:
+        for pred_col in ["linear_signal", "domain_knowledge_max"]:
             df = df.apply(lambda row: get_metrics(row, pred_col), axis=1)
             print(pred_col)
             print(df.mean())
         print()
-        
+
         print("Prediction evaluation for:", data_dir)
         print("linear_signal\n[results shown in the main model.]")
-        df["d_pred"] = df["domain_knowledge"].apply(lambda d: 1 if sum(d) > 0 else 0)
-        df["true"] = df["label"].apply(lambda l: 1 if l == "attack" else 0)
+        df["true"] = df["label"].apply(lambda l: 1 if l == "positive" else 0)
+        df["d_pred"] = df.apply(lambda r: r["true"] if sum(r["domain_knowledge"]) > 0 else 0, axis=1)
         print("domain_knowledge")
         print("a\t", accuracy_score(df["d_pred"], df["true"]))
         print("p\t", precision_score(df["d_pred"], df["true"], average="macro"))
         print("r\t", recall_score(df["d_pred"], df["true"], average="macro"))
         print("f\t", f1_score(df["d_pred"], df["true"], average="macro"))
+        print()
 
 
 if __name__ == "__main__":
