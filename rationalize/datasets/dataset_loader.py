@@ -204,7 +204,7 @@ class ClassificationData(object):
             s -- numpy array of linear signal s, shape (batch_size, seq_len),
                  each element is from -1-1 of coefficient of linear regression.
             d -- numpy array of domain knowledge d, shape (batch_size, seq_len),
-                 each element is of 0/1 if a word is selected as rationale by domain knowledge.
+                 each element is of -1/0/1 if a word is neg/non/pos-rationale with domain knowledge.
         """
 
         data_set = self.data_sets[set_id]

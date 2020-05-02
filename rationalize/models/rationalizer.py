@@ -289,7 +289,7 @@ class Rationalizer(nn.Module):
             s -- linear signal s, shape (batch_size, seq_len),
                  each element is from -1-1 of coefficient of linear regression.
             d -- domain knowledge d, shape (batch_size, seq_len),
-                 each element is of 0/1 if a word is selected as rationale by domain knowledge.
+                 each element is of -1/0/1 if a word is neg/non/pos-rationale with domain knowledge.
         Outputs:
             loss_val -- list of losses, [classifier, anti_classifier, tagger].
             predict -- prediction score of classifier, shape (batch_size, |label|),
@@ -320,6 +320,7 @@ class Rationalizer(nn.Module):
 
         # Get domain knowledge reward for tagged rationales.
         if self.lambda_d:
+            d[d < 0.0] = 0.0  # Binary.
             reward_d = self._get_guidance_reward(z, d)
         else:
             reward_d = 0
