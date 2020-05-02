@@ -1,4 +1,4 @@
-# Personal Attacks Dataset.
+# Movie Reviews Dataset.
 
 Download raw dataset to the `/raw` folder:
 ```
@@ -10,9 +10,9 @@ Clean data at this directory `.`:
 $ python data_cleaner.py
 ```
 
-Download emotional lexicon to the `/raw` folder:
+Download emotional lexicon EmoLex to the `/raw` folder:
 ```
-TBD
+http://sentiment.nrc.ca/lexicons-for-research/NRC-Emotion-Lexicon.zip
 ```
 
 Add linear siganl and domain knowledge at this directory `.`:
@@ -33,3 +33,6 @@ Rationale annotations was released by:
 
 Additional annotations was released by:
 - Jay DeYoung, Sarthak Jain, Nazneen Fatema Rajani, Eric Lehman, Caiming Xiong, Richard Socher, Byron C. Wallace, **ERASER: A Benchmark to Evaluate Rationalized NLP Models**, *arXiv 2020* (http://www.eraserbenchmark.com).
+
+The lexicon was released by:
+- Saif Mohammad, Peter Turney, **Crowdsourcing a Word-Emotion Association Lexicon**, *Computational Intelligence 2013* (https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm).

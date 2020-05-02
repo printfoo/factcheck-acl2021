@@ -37,7 +37,7 @@ class DataEvaluator(object):
     def evaluate(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
         df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.251) for _ in s.split()])
-        df["domain_knowledge"] = df["domain_knowledge"].apply(lambda r: [int(_) for _ in r.split()])
+        df["domain_knowledge"] = df["domain_knowledge"].apply(lambda d: [int(_) for _ in d.split()])
         df["rationale_annotation"] = df["rationale_annotation"].apply(lambda r: [int(_) for _ in r.split()])
         print("Rationale evaluation for:", data_dir)
         for pred_col in ["linear_signal", "domain_knowledge"]:
@@ -55,6 +55,7 @@ class DataEvaluator(object):
         print("p\t", precision_score(df["d_pred"], df["true"], average="macro"))
         print("r\t", recall_score(df["d_pred"], df["true"], average="macro"))
         print("f\t", f1_score(df["d_pred"], df["true"], average="macro"))
+        print()
 
 
 if __name__ == "__main__":

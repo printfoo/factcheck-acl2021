@@ -3,6 +3,7 @@
 
 import os, json
 import pandas as pd
+from nltk.stem.wordnet import WordNetLemmatizer
 
 
 class DataSignaler(object):
@@ -42,9 +43,12 @@ class DataSignaler(object):
     
     def _get_domain(self, row):
         tokens = row["tokens"].split(" ")
+        tokens = [wnl.lemmatize(token, "n") for token in tokens] # lemmatization nouns.
+        tokens = [wnl.lemmatize(token, "v") for token in tokens] # lemmatization verbs.
+        tokens = [wnl.lemmatize(token, "a") for token in tokens] # lemmatization adjectives.
         domain = ["1" if t in self.domain_set else "0" for t in tokens]
         return " ".join(domain)
-    
+
     
     def signal(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
@@ -54,6 +58,7 @@ class DataSignaler(object):
 
 
 if __name__ == "__main__":
+    wnl = WordNetLemmatizer()
     signaler = DataSignaler()
     signaler.signal(signaler.data_dirs[0])
     signaler.signal(signaler.data_dirs[1])
