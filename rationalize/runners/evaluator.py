@@ -5,7 +5,7 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
-from runners.metrics import precision, recall, f1, accuracy
+from runners.metrics import precision, recall, f1, accuracy, percentage
 
 
 def evaluate(model, data, args, set_name):
@@ -13,9 +13,9 @@ def evaluate(model, data, args, set_name):
     model.eval()  # Set model to eval mode.
 
     # Initialize records.
-    metric_funcs = {"precision": precision, "recall": recall, "f1": f1, "accuracy": accuracy}
+    metric_funcs = {"precision": precision, "recall": recall, "f1": f1, "accuracy": accuracy, "percentage": percentage}
     y_history = {"true": [], "pred": []}
-    r_history = {"precision": [], "recall": [], "f1": [], "accuracy": []}
+    r_history = {"precision": [], "recall": [], "f1": [], "accuracy": [], "percentage": []}
 
     instance_count = data.data_sets[set_name].size()
     for start in range(instance_count // args.batch_size):

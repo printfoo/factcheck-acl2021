@@ -56,9 +56,9 @@ def train(model, data, args):
             z_ = z.data[2,:]
             z_b = torch.zeros_like(z)
             z_b_ = z_b.data[2,:]
+            data.display_example(x_, z_)
             print("gold label:", data.idx2label[y_.item()])
             print("pred label:", data.idx2label[pred_.item()])
-            data.display_example(x_, z_)
 
         # Eval every args.eval_iteration.
         if args.eval_iteration and i % args.eval_iteration == 0:
@@ -76,6 +76,7 @@ def train(model, data, args):
             # Save checkpoint.
             snapshot_path = os.path.join(args.working_dir, "i_{:05d}.pt".format(i))
             torch.save(model, snapshot_path)
+            print("[Checkpoint saved.]")
 
     record_path = os.path.join(args.working_dir, "record.json")
     with open(record_path, "w") as f:

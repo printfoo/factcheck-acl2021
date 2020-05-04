@@ -9,6 +9,10 @@ def accuracy(true, pred, average=None, invalid=np.nan):
     return accuracy_score(true, pred)
 
 
+def percentage(true, pred, average=None, invalid=np.nan):
+    return sum(pred) / len(pred)
+
+
 def precision(true, pred, average="macro", invalid=np.nan):
     if sum(pred) == 0:
         return invalid

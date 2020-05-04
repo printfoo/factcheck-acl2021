@@ -207,9 +207,9 @@ class Rationalizer(nn.Module):
             reward -- reward of z comparing to ref, shape (batch_size,),
         """
 
-        # Get accuracy of rationale selection comparing to reference as reward,
+        # Get reward of rationale selection comparing to reference,
         # (batch_size, seq_len) -> (batch_size,)
-        reward = torch.mean((z == ref).float(), dim=1)
+        reward = torch.mean(z * ref, dim=1)
         return reward
 
 
@@ -328,7 +328,7 @@ class Rationalizer(nn.Module):
 
             # Get domain knowledge reward for tagged rationales.
             if self.lambda_d:
-                d[d < 0.0] = 0.0  # Binary.
+                d = torch.abs(d)  # Binary.
                 reward_d = self._get_guidance_reward(z, d)
             else:
                 reward_d = 0
