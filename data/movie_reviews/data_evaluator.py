@@ -24,6 +24,12 @@ def get_metrics(row, pred_col, true_col="rationale_annotation", average="binary"
     return row
 
 
+def get_num(r):
+    r_shifted = r[1:] + r[-1:]
+    num = [abs(r1 - r2) for r1, r2 in zip(r, r_shifted)]
+    return sum(num) / 2
+
+
 class DataEvaluator(object):
     """
     Dataset evaluator for personal attacks of linear models.
@@ -40,6 +46,13 @@ class DataEvaluator(object):
         df["domain_knowledge"] = df["domain_knowledge"].apply(lambda d: [int(_) for _ in d.split()])
         df["domain_knowledge_max"] = df["domain_knowledge"].apply(lambda d: [max(_, 0) for _ in d])
         df["rationale_annotation"] = df["rationale_annotation"].apply(lambda r: [int(_) for _ in r.split()])
+
+        rationale_len = df["rationale_annotation"].apply(sum).mean()
+        rationale_num = df["rationale_annotation"].apply(get_num).mean()
+        print("rationale_len:", rationale_len)
+        print("rationale_num:", rationale_num)
+        print()
+        
         print("Rationale evaluation for:", data_dir)
         for pred_col in ["linear_signal", "domain_knowledge_max"]:
             df = df.apply(lambda row: get_metrics(row, pred_col), axis=1)
