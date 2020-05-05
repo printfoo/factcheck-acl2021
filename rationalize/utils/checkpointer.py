@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Find the best checkpoint.
-def find_best_ckpt(path, metric="f1", by="dev"):
+def find_best_ckpt(path, metric="f1", by="dev", show="test"):
     if not os.path.exists(path):
         return "[Checkpoints not found.]"
     with open(os.path.join(path, "record.json"), "r") as f:
@@ -16,6 +16,7 @@ def find_best_ckpt(path, metric="f1", by="dev"):
     if len(record[by]) != len(ckpts):
         return "[Checkpoints unexpected error.]"
     best_ckpt_index = np.nanargmax([_["prediction"][metric] for _ in record[by]])
+    print("Best results:", record[show][best_ckpt_index])
     best_ckpt_path = os.path.join(path, ckpts[best_ckpt_index])
     return best_ckpt_path
 

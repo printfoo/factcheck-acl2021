@@ -49,10 +49,10 @@ def evaluate(model, data, args, set_name):
         y_history["pred"].extend(y_pred.tolist())
 
         # Extend metrics of rationale r to history.
-        for a_r, a_r_pred in zip(r, r_pred):
+        for a_r, a_r_pred, a_m in zip(r, r_pred, m):
             for metric_name, metric_func in metric_funcs.items():
                 r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist(),
-                                                          average="binary"))
+                                                          mask=a_m.tolist(), average="binary"))
 
     # Get metrics for predictions y and rationales r.
     y_metrics = {}
