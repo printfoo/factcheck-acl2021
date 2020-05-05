@@ -23,7 +23,7 @@ class DataSignaler(object):
             self.signal_dicts[l] = {w: s for w, s in vocab[["word", l]].values}
             print(l, "fuck", self.signal_dicts[l]["fuck"])
         signal_sorted = sorted(self.signal_dicts[l].items(), key=lambda _: abs(_[1]))
-        threshold = signal_sorted[int(len(signal_sorted) * -0.01):]
+        threshold = signal_sorted[int(len(signal_sorted) * -0.05):]
         print("Threshold:", threshold[0][1])
         
         # Domain knowledge.
@@ -50,11 +50,8 @@ class DataSignaler(object):
         tokens = [wnl.lemmatize(token, "n") for token in tokens] # lemmatization nouns.
         tokens = [wnl.lemmatize(token, "v") for token in tokens] # lemmatization verbs.
         tokens = [wnl.lemmatize(token, "a") for token in tokens] # lemmatization adjectives.
-        domain_dict = self.domain_dicts[row["label"]]
-        not_label = (self.domain_dicts.keys() - {row["label"]}).pop()
-        not_domain_dict = self.domain_dicts[not_label]
-        domain = ["1" if t in domain_dict else
-                  ("-1" if t in not_domain_dict else "0")
+        domain = ["1" if t in self.domain_dicts["positive"] else
+                  ("-1" if t in self.domain_dicts["negative"] else "0")
                   for t in tokens]
         return " ".join(domain)
 

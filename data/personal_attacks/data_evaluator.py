@@ -21,6 +21,7 @@ def get_metrics(row, pred_col, true_col="rationale_annotation", average="binary"
         row["f"] = f1_score(row[true_col], row[pred_col], average=average)
     else:
         row["f"] = np.nan
+    row["%"] = sum(row[pred_col]) / len(row[pred_col])
     return row
 
 
