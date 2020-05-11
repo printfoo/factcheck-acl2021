@@ -60,17 +60,19 @@ class DataCleaner(object):
         # Process tokens.
         factcheck[["tokens", "len"]] = factcheck["content"].apply(process_tokens)
         factcheck = factcheck.dropna()
-        factcheck["comment"] = factcheck["tokens"]
-        factcheck["rationale"] = ""
+        factcheck["rationale_annotation"] = " "
+        factcheck["linear_signal"] = " "
+        factcheck["domain_knowledge"] = " "
         
         # Split and save.
+        selected_cols = ["label", "tokens", "rationale_annotation", "linear_signal", "domain_knowledge"]
         train = factcheck.sample(frac=0.8)
-        train[["label", "comment", "rationale"]].to_csv("train.tsv", sep="\t", index=False)
+        train[selected_cols].to_csv("train.tsv", sep="\t", index=False)
         factcheck = factcheck.drop(train.index)
         dev = factcheck.sample(frac=0.5)
-        dev[["label", "comment", "rationale"]].to_csv("dev.tsv", sep="\t", index=False)
+        dev[selected_cols].to_csv("dev.tsv", sep="\t", index=False)
         test = factcheck.drop(dev.index)
-        test[["label", "comment", "rationale"]].to_csv("test.tsv", sep="\t", index=False)
+        test[selected_cols].to_csv("test.tsv", sep="\t", index=False)
         
 
 if __name__ == "__main__":

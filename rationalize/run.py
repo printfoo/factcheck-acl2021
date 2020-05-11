@@ -9,7 +9,7 @@ parser.add_argument("--mode", type=str, default="train",
                     help="Run mode, train or eval.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--data_name", type=str, default="movie_reviews",
+parser.add_argument("--data_name", type=str, default="factchecks",
                     help="Dataset name.")
 parser.add_argument("--config_name", type=str, default="rationalizer_full",
                     help="Dataset name.")
