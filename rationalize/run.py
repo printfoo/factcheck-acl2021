@@ -9,9 +9,9 @@ parser.add_argument("--mode", type=str, default="train",
                     help="Run mode, train or eval.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
-parser.add_argument("--data_name", type=str, default="factchecks",
+parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="rationalizer_full",
+parser.add_argument("--config_name", type=str, default="linear_bow",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
@@ -29,7 +29,10 @@ train_args.embedding_dir = os.path.join(args.data_dir, train_args.embedding_name
 train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt")
 
 # Set GPU chips.
-os.environ["CUDA_VISIBLE_DEVICES"] = train_args.gpu_id
+if torch.cuda.device_count() > 1:
+    os.environ["CUDA_VISIBLE_DEVICES"] = train_args.gpu_id
+else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 # Train or analyze a model.
