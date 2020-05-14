@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="personal_attacks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="linear_bow",
+parser.add_argument("--config_name", type=str, default="rationalizer_full",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
@@ -29,17 +29,15 @@ train_args.embedding_dir = os.path.join(args.data_dir, train_args.embedding_name
 train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt")
 
 # Set GPU chips.
+import torch
 if torch.cuda.device_count() > 1:
-    os.environ["CUDA_VISIBLE_DEVICES"] = train_args.gpu_id
-else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    torch.cuda.set_device(int(train_args.gpu_id))
 
 
 # Train or analyze a model.
 if args.mode in {"train", "analyze"}:
 
     # Set random seeds.
-    import torch
     import numpy as np
     import random
     torch.manual_seed(args.random_seed)

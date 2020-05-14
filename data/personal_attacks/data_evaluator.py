@@ -43,7 +43,7 @@ class DataEvaluator(object):
     
     def evaluate(self, data_dir):
         df = pd.read_csv(data_dir, sep="\t")
-        df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.251) for _ in s.split()])
+        df["linear_signal"] = df["linear_signal"].apply(lambda s: [int(float(_) >= 0.2) for _ in s.split()])
         df["domain_knowledge"] = df["domain_knowledge"].apply(lambda d: [int(_) for _ in d.split()])
         df["rationale_annotation"] = df["rationale_annotation"].apply(lambda r: [int(_) for _ in r.split()])
 
