@@ -61,7 +61,7 @@ class ClassificationDataSet(object):
                 rationale = rationale[:truncate_num]
             rs.append(rationale)
             
-            # Add a list of linear signal to sample.
+            # Add a list of importance score to sample.
             signal = pair_dict_["signal"]
             if truncate_num > 0:  # Truncate rationales.
                 signal = signal[:truncate_num]

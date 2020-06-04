@@ -28,6 +28,7 @@ class Classifier(nn.Module):
         """
         super(Classifier, self).__init__()
         self.NEG_INF = -1.0e6
+        self.rationale_binary = args.rationale_binary
         encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder, "TRM": TrmEncoder}
         self.encoder = encoders[args.model_type](args)
         self.predictor = nn.Linear(args.hidden_dim, args.num_labels)
@@ -39,7 +40,8 @@ class Classifier(nn.Module):
             e -- input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
                  each element in the seq_len is a word embedding of embedding_dim.
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             m -- mask of the input sequence, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
@@ -54,10 +56,14 @@ class Classifier(nn.Module):
         # (batch_size, seq_len, embedding_dim) -> (batch_size, hidden_dim, seq_len).
         hiddens = self.encoder(rationales, m)
 
-        # Get max hidden of a sequence from hiddens,
-        # Here hiddens are masked by rationale selection z again (m * z),
-        # (batch_size, hidden_dim, seq_len) -> (batch_size, hidden_dim)
-        max_hidden = torch.max(hiddens + (1 - m * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
+        if self.rationale_binary:  # if selecting hard (0 or 1) rationales.
+            # Get max hidden of a sequence from hiddens,
+            # Here hiddens are masked by rationale selection z again (m * z),
+            # (batch_size, hidden_dim, seq_len) -> (batch_size, hidden_dim)
+            max_hidden = torch.max(hiddens + (1 - m * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
+        
+        else:  # else just get max_hidden.
+            max_hidden = torch.max(hiddens, dim=2)[0]
 
         # Pass max hidden to an output linear layer and get prediction,
         # (batch_size, hidden_dim) -> (batch_size, |label|).

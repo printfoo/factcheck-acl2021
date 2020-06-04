@@ -13,14 +13,14 @@ from models.tagger import Tagger
 from models.classifier import Classifier
 
 
-class Rationalizer(nn.Module):
+class HardRationalizer(nn.Module):
     """
-    Rationalizer model.
+    HardRationalizer model.
     Using model.Tagger and model.Classifier modules.
     """
 
     def __init__(self, embeddings, args):
-        super(Rationalizer, self).__init__()
+        super(HardRationalizer, self).__init__()
 
         # General parameters.
         self.NEG_INF = -1.0e6
@@ -52,8 +52,8 @@ class Rationalizer(nn.Module):
         else:
             self.lambda_anti = 0
 
-        # Whether and how much to use linear signal to guide rationale selection.
-        if bool(args.linear_signal):
+        # Whether and how much to use importance score to guide rationale selection.
+        if bool(args.importance_score):
             self.lambda_s = args.lambda_s
             self.threshold_s = args.threshold_s
         else:
@@ -108,7 +108,8 @@ class Rationalizer(nn.Module):
             anti_predict -- prediction score of anti classifier, shape (batch_size, |label|),
                             each element at i is a predicted probability for label[i].
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
         """
 
@@ -145,12 +146,13 @@ class Rationalizer(nn.Module):
             reward_classifier -- accuracy of the classifier, shape (batch_size,),
                                    each element at i is of 0/1 for incorrect/correct prediction.
             reward_anti_classifier -- accuracy of the anti_classifier, shape (batch_size,),
-            reward_s -- reward of z comparing to linear signal s, shape (batch_size,),
+            reward_s -- reward of z comparing to importance score s, shape (batch_size,),
             reward_d -- reward of z comparing to domain knowledge d, shape (batch_size,),
             loss_continuity -- loss for continuity, shape (batch_size,),
             sparsity_loss -- loss for sparsity, shape (batch_size,),
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
             m -- mask m, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
@@ -199,10 +201,11 @@ class Rationalizer(nn.Module):
         Get guidance reward of rationale selection.
         Inputs:
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             ref -- reference for rationale selection, shape (batch_size, seq_len),
                    each element is of 0/1 selecting a token or not,
-                   this reference could be linear signal s or domain knowledge d.
+                   this reference could be importance score s or domain knowledge d.
         Outputs:
             reward -- reward of z comparing to ref, shape (batch_size,),
         """
@@ -218,7 +221,8 @@ class Rationalizer(nn.Module):
         Get regularization loss of rationale selection.
         Inputs:
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             m -- mask m, shape (batch_size, seq_len),
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
@@ -291,8 +295,8 @@ class Rationalizer(nn.Module):
                  each element in the seq_len is of 0/1 selecting a token or not.
             r -- rationale annotation r, shape (batch_size, seq_len),
                  each element is of 0/1 if a word is selected as rationale by human annotators.
-            s -- linear signal s, shape (batch_size, seq_len),
-                 each element is from -1-1 of coefficient of linear regression.
+            s -- importance score s, shape (batch_size, seq_len),
+                 each element represents the importance of corresponding feature.
             d -- domain knowledge d, shape (batch_size, seq_len),
                  each element is of -1/0/1 if a word is neg/non/pos-rationale with domain knowledge.
         Outputs:
@@ -300,7 +304,8 @@ class Rationalizer(nn.Module):
             predict -- prediction score of classifier, shape (batch_size, |label|),
                        each element at i is a predicted probability for label[i].
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
         """
         
         # Forward model and get rationales, predictions, etc.
@@ -319,7 +324,7 @@ class Rationalizer(nn.Module):
             # Get regularization loss for tagged rationales.
             loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
         
-            # Get linear signal reward for tagged rationales.
+            # Get importance score reward for tagged rationales.
             if self.lambda_s:
                 s = (s >= self.threshold_s).float()  # Binary.
                 reward_s = self._get_guidance_reward(z, s)

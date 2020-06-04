@@ -27,6 +27,7 @@ class Tagger(nn.Module):
         """
         super(Tagger, self).__init__()
         self.NEG_INF = -1.0e6
+        self.rationale_binary = args.rationale_binary
         encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder, "TRM": TrmEncoder}
         self.encoder = encoders[args.model_type](args)
         self.predictor = nn.Linear(args.hidden_dim, 2)
@@ -74,7 +75,8 @@ class Tagger(nn.Module):
                  each element in the seq_len is of 0/1 selecting a token or not.
         Outputs:
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
         """
 
@@ -92,8 +94,12 @@ class Tagger(nn.Module):
         # Run a softmax for valid probs (batch_size, seq_len, 0) + (batch_size, seq_len, 1) = 1.
         z_probs = F.softmax(z_scores, dim=-1)
 
-        # Generate rationale and negative log probs,
-        # (batch_size, seq_len, 2) -> (batch_size, seq_len)
-        z, neg_log_probs = self._binarize_probs(z_probs)
+        if self.rationale_binary:  # if selecting hard (0 or 1) rationales.
+            # Generate rationale and negative log probs,
+            # (batch_size, seq_len, 2) -> (batch_size, seq_len)
+            z, neg_log_probs = self._binarize_probs(z_probs)
+            return z, neg_log_probs
+        
+        else:  # else return soft rationale selection, i.e., attention.
+            return z, None
 
-        return z, neg_log_probs

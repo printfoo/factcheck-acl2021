@@ -24,6 +24,7 @@ class ClassificationData(object):
             args.freq_threshold -- min frequency for tokens.
         """
         self.data_path = data_path
+        self.score_type = args.score_type
         self.truncate_num = args.truncate_num
         self.freq_threshold = args.freq_threshold
         
@@ -127,7 +128,7 @@ class ClassificationData(object):
             tokens = r["tokens"].split(" ")
             label = r["label"]
             rationale = [float(_) if _ else 0. for _ in r["rationale_annotation"].split(" ")]
-            signal = [float(_) if _ else 0. for _ in r["linear_signal"].split(" ")]
+            signal = [float(_) if _ else 0. for _ in r[self.score_type].split(" ")]
             domain = [float(_) if _ else 0. for _ in r["domain_knowledge"].split(" ")]
             if label not in self.label_vocab:
                 self.label_vocab[label] = len(self.label_vocab)
@@ -201,8 +202,8 @@ class ClassificationData(object):
                  each element in the seq_len is of 0/1 selecting a token or not.
             r -- numpy array of rationale annotation r, shape (batch_size, seq_len),
                  each element is of 0/1 if a word is selected as rationale by human annotators.
-            s -- numpy array of linear signal s, shape (batch_size, seq_len),
-                 each element is from -1-1 of coefficient of linear regression.
+            s -- numpy array of importance score s, shape (batch_size, seq_len),
+                 each element represents the importance of corresponding feature.
             d -- numpy array of domain knowledge d, shape (batch_size, seq_len),
                  each element is of -1/0/1 if a word is neg/non/pos-rationale with domain knowledge.
         """
