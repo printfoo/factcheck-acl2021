@@ -13,14 +13,14 @@ from models.tagger import Tagger
 from models.classifier import Classifier
 
 
-class HardRationalizer(nn.Module):
+class Rationalizer(nn.Module):
     """
-    HardRationalizer model.
+    Rationalizer model.
     Using model.Tagger and model.Classifier modules.
     """
 
     def __init__(self, embeddings, args):
-        super(HardRationalizer, self).__init__()
+        super(Rationalizer, self).__init__()
 
         # General parameters.
         self.NEG_INF = -1.0e6

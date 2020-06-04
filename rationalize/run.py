@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="movie_reviews",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="hard_rationalizer",
+parser.add_argument("--config_name", type=str, default="soft_rationalizer",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
