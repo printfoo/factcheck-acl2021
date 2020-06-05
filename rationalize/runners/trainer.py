@@ -49,16 +49,9 @@ def train(model, data, args):
         # Display every args.display_iteration.
         if args.display_iteration and i % args.display_iteration == 0:
             _, y_pred = torch.max(predict, dim=1)
-            y_ = y[2]
-            y_pred = torch.max(predict, dim=1)[1]
-            pred_ = y_pred.data[2]
-            x_ = x[2,:]
-            z_ = z.data[2,:]
-            z_b = torch.zeros_like(z)
-            z_b_ = z_b.data[2,:]
-            data.display_example(x_, z_)
-            print("gold label:", data.idx2label[y_.item()])
-            print("pred label:", data.idx2label[pred_.item()])
+            data.display_example(x[2, :], z[2, :])
+            print("gold label:", data.idx2label[y[2].item()])
+            print("pred label:", data.idx2label[y_pred.data[2].item()])
 
         # Eval every args.eval_iteration.
         if args.eval_iteration and i % args.eval_iteration == 0:

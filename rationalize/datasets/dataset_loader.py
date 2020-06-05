@@ -246,17 +246,16 @@ class ClassificationData(object):
             x -- input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
             z -- selected rationale, shape (batch_size, seq_len),
-                 each element in the seq_len is of 0/1 selecting a token or not.
+                 hard: each element is of 0/1 selecting a token or not.
+                 soft: each element is between 0-1 the attention paid to a token.
             threshold -- display as rationale if z_i >= threshold.
         """
-        condition = z >= threshold
-        for word_index, display_flag in zip(x, condition):
+        z = (z - z.min()) / (z.max() - z.min())
+        for word_index, z_ in zip(x, z):
             word = self.idx2word[word_index.item()]
-            if display_flag:
-                output_word = "%s %s%s" % (fg(1), word, attr(0))
-                print(output_word, end="")
-            else:
-                print(" " + word, end="")
+            color = 231 - 6 * int(z_ * 5)
+            output_word = "%s %s%s" % (fg(color), word, attr(0))
+            print(output_word, end="")
         print()
 
 

@@ -41,18 +41,19 @@ def evaluate(model, data, args, set_name):
             d = d.cuda()
 
         # Get predictions and rationales.
-        predict, _, r_pred, _ = model(x, m)
+        predict, _, r_pred, _, _ = model(x, m)
         _, y_pred = torch.max(predict, dim=1)
 
         # Extend predictions y to history.
         y_history["true"].extend(y.tolist())
         y_history["pred"].extend(y_pred.tolist())
 
-        # Extend metrics of rationale r to history.
-        for a_r, a_r_pred, a_m in zip(r, r_pred, m):
-            for metric_name, metric_func in metric_funcs.items():
-                r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist(),
-                                                          mask=a_m.tolist(), average="binary"))
+        if args.rationale_binary:
+            # Extend metrics of rationale r to history.
+            for a_r, a_r_pred, a_m in zip(r, r_pred, m):
+                for metric_name, metric_func in metric_funcs.items():
+                    r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist(),
+                                                              mask=a_m.tolist(), average="binary"))
 
     # Get metrics for predictions y and rationales r.
     y_metrics = {}
@@ -60,6 +61,7 @@ def evaluate(model, data, args, set_name):
     for metric_name, metric_func in metric_funcs.items():
         y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"],
                                              average="macro")
-        r_metrics[metric_name] = np.nanmean(r_history[metric_name])
-    
+        if args.rationale_binary:
+            r_metrics[metric_name] = np.nanmean(r_history[metric_name])
+
     return {"prediction": y_metrics, "rationale": r_metrics}

@@ -32,17 +32,20 @@ class Rationalizer(nn.Module):
         self.vocab_size, self.embedding_dim = embeddings.shape
         self.embed_layer = self._create_embed_layer(embeddings, bool(args.fine_tuning))
 
-        # Initialize classifiers.
-        self.classifier = Classifier(args)
-        self.opt_classifier = torch.optim.Adam(p_grad(self.classifier), lr=args.lr)
-
-        # Whether to tag rationale, otherwise just standard classification problem.
+        # Whether and how to tag rationale, otherwise just standard classification problem.
+        self.rationale_binary = bool(args.rationale_binary)
         self.rationale_tagger = bool(args.rationale_tagger)
-        if self.rationale_tagger:
-            self.tagger = Tagger(args)
-            self.opt_tagger = torch.optim.Adam(p_grad(self.tagger), lr=args.lr*0.1)
-            self.history_rewards = deque(maxlen=200) # Initialize reward queue for reinforce loss.
-            self.history_rewards.append(0.)
+        
+        if self.rationale_tagger:  # If use tagger.
+            self.tagger = Tagger(args)  # Initialize tagger.
+            self.classifier = Classifier(args)  # Initialize classifier.
+            if self.rationale_binary:  # If hard rationale, two opts for tagger and classifier.
+                self.opt_tagger = torch.optim.Adam(p_grad(self.tagger), lr=args.lr*0.1)
+                self.opt_classifier = torch.optim.Adam(p_grad(self.classifier), lr=args.lr)
+                self.history_rewards = deque(maxlen=200) # Initialize reward queue for reinforce loss.
+                self.history_rewards.append(0.)
+            else:   # Else soft rationale, just one opt.
+                self.opt_classifier = torch.optim.Adam(p_grad(self), lr=args.lr)
 
         # Whether and how much to use an anti predictor to limit rationale selection.
         if bool(args.anti_predictor):
@@ -111,6 +114,7 @@ class Rationalizer(nn.Module):
                  hard: each element is of 0/1 selecting a token or not.
                  soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
+            z_scores -- the score of z, shape (batch_size, seq_len, 2).
         """
 
         # Lookup embeddings of each token,
@@ -120,9 +124,9 @@ class Rationalizer(nn.Module):
         # Rationale and negative log probs,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len).
         if self.rationale_tagger:
-            z, neg_log_probs = self.tagger(embeddings, m)
+            z, neg_log_probs, z_scores = self.tagger(embeddings, m)
         else:
-            z, neg_log_probs = m, None
+            z, neg_log_probs, z_scores = m, None, None
 
         # Prediction of anti classifier,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
@@ -134,8 +138,7 @@ class Rationalizer(nn.Module):
         # Prediction of classifier,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
         predict = self.classifier(embeddings, z, m)
-
-        return predict, anti_predict, z, neg_log_probs
+        return predict, anti_predict, z, neg_log_probs, z_scores
     
 
     def _get_tagger_loss(self, reward_classifier, reward_anti_classifier, reward_s, reward_d,
@@ -309,7 +312,7 @@ class Rationalizer(nn.Module):
         """
         
         # Forward model and get rationales, predictions, etc.
-        predict, anti_predict, z, neg_log_probs = self.forward(x, m)
+        predict, anti_predict, z, neg_log_probs, z_scores = self.forward(x, m)
 
         # Get loss and accuracy for classifier and anti-classifier.
         loss_classifier, reward_classifier = self._get_classifier_loss(predict, y)
@@ -318,36 +321,40 @@ class Rationalizer(nn.Module):
         else:
             loss_anti_classifier, reward_anti_classifier = 0, 0
         
-        # If use rationale tagger.
-        if self.rationale_tagger:
+        # Get loss for tagger.
+        if self.rationale_tagger:  # If use rationale tagger.
+            
+            if self.rationale_binary:  # If hard rationale, two opts for tagger and classifier.
 
-            # Get regularization loss for tagged rationales.
-            loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
+                # Get regularization loss for tagged rationales.
+                loss_continuity, loss_sparsity = self._get_regularization_loss(z, m)
         
-            # Get importance score reward for tagged rationales.
-            if self.lambda_s:
-                s = (s >= self.threshold_s).float()  # Binary.
-                reward_s = self._get_guidance_reward(z, s)
-            else:
-                reward_s = 0
+                # Get importance score reward for tagged rationales.
+                if self.lambda_s:
+                    s = (s >= self.threshold_s).float()  # Binary.
+                    reward_s = self._get_guidance_reward(z, s)
+                else:
+                    reward_s = 0
 
-            # Get domain knowledge reward for tagged rationales.
-            if self.lambda_d:
-                d = torch.abs(d)  # Binary.
-                reward_d = self._get_guidance_reward(z, d)
-            else:
-                reward_d = 0
+                # Get domain knowledge reward for tagged rationales.
+                if self.lambda_d:
+                    d = torch.abs(d)  # Binary.
+                    reward_d = self._get_guidance_reward(z, d)
+                else:
+                    reward_d = 0
 
-            # Get reinforce-style loss for tagger.
-            loss_tagger = self._get_tagger_loss(reward_classifier, reward_anti_classifier, reward_s, reward_d,
-                                                loss_continuity, loss_sparsity, z, neg_log_probs, m)
+                # Get reinforce-style loss for tagger.
+                loss_tagger = self._get_tagger_loss(reward_classifier, reward_anti_classifier,
+                                                    reward_s, reward_d, loss_continuity, loss_sparsity,
+                                                    z, neg_log_probs, m)
 
         # Backpropagate losses.
         losses = [loss_classifier]
         opts = [self.opt_classifier]
         if self.rationale_tagger:  # Append tagger loss and optimizer.
-            losses.append(loss_tagger)
-            opts.append(self.opt_tagger)
+            if self.rationale_binary:  # If hard rationale, two opts for tagger and classifier.
+                losses.append(loss_tagger)
+                opts.append(self.opt_tagger)
         if self.lambda_anti:  # Append anti classifier loss and optimizer.
             losses.append(loss_anti_classifier)
             opts.append(self.opt_anti_classifier)
@@ -357,7 +364,7 @@ class Rationalizer(nn.Module):
             opt.step()
             opt.zero_grad()
             loss_val.append(loss.item())
-        
+
         return loss_val, predict, z
 
 

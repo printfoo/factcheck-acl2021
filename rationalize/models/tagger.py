@@ -30,7 +30,10 @@ class Tagger(nn.Module):
         self.rationale_binary = args.rationale_binary
         encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder, "TRM": TrmEncoder}
         self.encoder = encoders[args.model_type](args)
-        self.predictor = nn.Linear(args.hidden_dim, 2)
+        if self.rationale_binary:
+            self.predictor = nn.Linear(args.hidden_dim, 2)
+        else:
+            self.predictor = nn.Linear(args.hidden_dim, 1)
 
 
     def _binarize_probs(self, z_probs):
@@ -78,6 +81,7 @@ class Tagger(nn.Module):
                  hard: each element is of 0/1 selecting a token or not.
                  soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
+            z_scores -- the score of z, shape (batch_size, seq_len, 2).
         """
 
         # Pass embeddings through an encoder and get hidden states,
@@ -85,21 +89,33 @@ class Tagger(nn.Module):
         hiddens = self.encoder(e, m).permute(0, 2, 1).contiguous()
 
         # Pass hidden states to an output linear layer and get rationale scores,
-        # (batch_size, seq_len, hidden_dim) -> (batch_size, seq_len, 2).
+        # hard: (batch_size, seq_len, hidden_dim) -> (batch_size, seq_len, 2).
+        # soft: (batch_size, seq_len, hidden_dim) -> (batch_size, seq_len, 1).
         z_scores = self.predictor(hiddens)
-
-        # Replace (batch_size, seq_len, 1) with -inf.
-        z_scores[:, :, 1] = z_scores[:, :, 1] + (1 - m) * self.NEG_INF
-
-        # Run a softmax for valid probs (batch_size, seq_len, 0) + (batch_size, seq_len, 1) = 1.
-        z_probs = F.softmax(z_scores, dim=-1)
-
-        if self.rationale_binary:  # if selecting hard (0 or 1) rationales.
+        
+        if self.rationale_binary:  # If selecting hard (0 or 1) rationales.
+            
+            # Replace padded tokens with -inf.
+            z_scores[:, :, 1] = z_scores[:, :, 1] + (1 - m) * self.NEG_INF
+            
+            # Run a softmax for valid probs across each token, |dim_-1| = 2.
+            z_probs = F.softmax(z_scores, dim=-1)
+            
             # Generate rationale and negative log probs,
             # (batch_size, seq_len, 2) -> (batch_size, seq_len)
             z, neg_log_probs = self._binarize_probs(z_probs)
-            return z, neg_log_probs
+            return z, neg_log_probs, z_scores
         
-        else:  # else return soft rationale selection, i.e., attention.
-            return z, None
+        else:  # Else return soft rationale selection, i.e., attention.
+            
+            # Replace padded tokens with -inf.
+            z_scores[:, :, 0] = z_scores[:, :, 0] + (1 - m) * self.NEG_INF
+            
+            # Run a softmax for valid probs across each sequence, |dim_1| = seq_len.
+            z = F.softmax(z_scores, dim=1)
+            
+            # Change view of z,
+            # (batch_size, seq_len, 1) -> (batch_size, seq_len).
+            z = z.view(z.size(0), z.size(1))
+            return z, None, z_scores
 
