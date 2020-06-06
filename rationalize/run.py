@@ -32,17 +32,17 @@ train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt"
 import torch
 if torch.cuda.device_count() > 1:
     torch.cuda.set_device(int(train_args.gpu_id))
+    
+# Set random seeds.
+import numpy as np
+import random
+torch.manual_seed(args.random_seed)
+np.random.seed(args.random_seed)
+random.seed(args.random_seed)
 
 
 # Train or analyze a model.
 if args.mode in {"train", "analyze"}:
-
-    # Set random seeds.
-    import numpy as np
-    import random
-    torch.manual_seed(args.random_seed)
-    np.random.seed(args.random_seed)
-    random.seed(args.random_seed)
 
     # Load data.
     from datasets.dataset_loader import ClassificationData

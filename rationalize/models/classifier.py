@@ -29,16 +29,22 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.NEG_INF = -1.0e6
         self.rationale_binary = args.rationale_binary
+        
+        # Initialize encoder.
         encoders = {"RNN": RnnEncoder, "CNN": CnnEncoder, "TRM": TrmEncoder}
         self.encoder = encoders[args.model_type](args)
-        self.predictor = nn.Linear(args.hidden_dim, args.num_labels)
+        
+        # Initialize linear predictor, bias term depends on hard/soft rationale selection.
+        self.predictor = nn.Linear(args.hidden_dim, args.num_labels,
+                                   bias=self.rationale_binary)
 
 
-    def forward(self, e, z, m):
+    def forward(self, e, h, z, m):
         """
         Inputs:
             e -- input sequence with embeddings, shape (batch_size, seq_len, embedding_dim),
                  each element in the seq_len is a word embedding of embedding_dim.
+            h -- hidden states of the encoder, shape (batch_size, seq_len, hidden_dim).
             z -- selected rationale, shape (batch_size, seq_len),
                  hard: each element is of 0/1 selecting a token or not.
                  soft: each element is between 0-1 the attention paid to a token.
@@ -49,24 +55,33 @@ class Classifier(nn.Module):
                        each element at i is a predicted probability for label[i].
         """
 
-        # Get rationales by masking input sequence with rationale selection z.
-        rationales = e * z.unsqueeze(-1)
-
-        # Pass rationales through an encoder and get hidden states,
-        # (batch_size, seq_len, embedding_dim) -> (batch_size, hidden_dim, seq_len).
-        hiddens = self.encoder(rationales, m)
-
         if self.rationale_binary:  # If selecting hard (0 or 1) rationales.
+            
+            # Get rationales by masking input sequence with rationale selection z,
+            # (batch_size, seq_len, embedding_dim).
+            rationales = e * z.unsqueeze(-1)
+
+            # Pass rationales through an encoder and get hidden states,
+            # (batch_size, seq_len, embedding_dim) -> (batch_size, hidden_dim, seq_len).
+            hiddens = self.encoder(rationales, m)
+
             # Get max hidden of a sequence from hiddens,
             # Here hiddens are masked by rationale selection z again (m * z),
-            # (batch_size, hidden_dim, seq_len) -> (batch_size, hidden_dim)
-            max_hidden = torch.max(hiddens + (1 - m * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
+            # (batch_size, hidden_dim, seq_len) -> (batch_size, hidden_dim).
+            hidden = torch.max(hiddens + (1 - m * z).unsqueeze(1) * self.NEG_INF, dim=2)[0]
         
-        else:  # Else just get max_hidden.
-            max_hidden = torch.max(hiddens + (1 - m).unsqueeze(1) * self.NEG_INF, dim=2)[0]
+        else:  # Else selecting soft (attention) rationales.
+            
+            # Get rationales by weighing hidden states with rationale selection z.
+            # (batch_size, seq_len, hidden_dim).
+            rationales = h * z.unsqueeze(-1)
+            
+            # Get sum hiddenof a sequence from hiddens,
+            # (batch_size, seq_len, hidden_dim) -> (batch_size, hidden_dim).
+            hidden = torch.sum(rationales, dim=1)
 
         # Pass max hidden to an output linear layer and get prediction,
         # (batch_size, hidden_dim) -> (batch_size, |label|).
-        predict = self.predictor(max_hidden)
+        predict = self.predictor(hidden)
 
         return predict

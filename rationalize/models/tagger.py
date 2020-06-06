@@ -82,6 +82,7 @@ class Tagger(nn.Module):
                  soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
             z_scores -- the score of z, shape (batch_size, seq_len, 2).
+            hiddens -- hidden states of the encoder, shape (batch_size, seq_len, hidden_dim).
         """
 
         # Pass embeddings through an encoder and get hidden states,
@@ -117,5 +118,5 @@ class Tagger(nn.Module):
             # Change view of z,
             # (batch_size, seq_len, 1) -> (batch_size, seq_len).
             z = z.view(z.size(0), z.size(1))
-            return z, None, z_scores
+            return z, None, z_scores, hiddens
 

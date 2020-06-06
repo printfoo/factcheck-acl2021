@@ -124,9 +124,9 @@ class Rationalizer(nn.Module):
         # Rationale and negative log probs,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len).
         if self.rationale_tagger:
-            z, neg_log_probs, z_scores = self.tagger(embeddings, m)
+            z, neg_log_probs, z_scores, hiddens = self.tagger(embeddings, m)
         else:
-            z, neg_log_probs, z_scores = m, None, None
+            z, neg_log_probs, z_scores, hiddens = m, None, None, None
 
         # Prediction of anti classifier,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
@@ -137,7 +137,7 @@ class Rationalizer(nn.Module):
 
         # Prediction of classifier,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
-        predict = self.classifier(embeddings, z, m)
+        predict = self.classifier(embeddings, hiddens, z, m)
         return predict, anti_predict, z, neg_log_probs, z_scores
     
 
