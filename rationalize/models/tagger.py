@@ -81,7 +81,7 @@ class Tagger(nn.Module):
                  hard: each element is of 0/1 selecting a token or not.
                  soft: each element is between 0-1 the attention paid to a token.
             neg_log_probs -- negative log probability, shape (batch_size, seq_len).
-            z_scores -- the score of z, shape (batch_size, seq_len, 2).
+            z_scores -- the score of z, shape (batch_size, seq_len, 1 or 2).
             hiddens -- hidden states of the encoder, shape (batch_size, seq_len, hidden_dim).
         """
 

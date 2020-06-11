@@ -84,7 +84,7 @@ if args.mode in {"train", "analyze"}:
         # Analyze model.
         analyze_out = os.path.join(args.data_path, args.config_name + ".analyze")
         analyzer = importlib.import_module("analyzers.analyze_" + train_args.model_name)
-        analyzer.analyze(ckpt_path, analyze_out, data)
+        analyzer.analyze(ckpt_path, analyze_out, data, train_args)
         print("Model successfully analyzed.")
 
 

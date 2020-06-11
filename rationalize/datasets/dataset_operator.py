@@ -13,13 +13,14 @@ class ClassificationDataSet(object):
         self.instances = []
         self.label2instance_dict = {}
         
-    def add_one(self, tokens, label, rationale, signal, domain, truncate_num=0):
+    def add_one(self, id_, tokens, label, rationale, signal, domain, truncate_num=0):
         if truncate_num > 0:  # Truncate sentences.
             tokens = tokens[:truncate_num]
             rationale = rationale[:truncate_num]
             signal = signal[:truncate_num]
             domain = domain[:truncate_num]
-        self.instances.append({"tokens": tokens,
+        self.instances.append({"id": id_, 
+                               "tokens": tokens,
                                "label": label,
                                "rationale": rationale,
                                "signal": signal,
@@ -40,6 +41,7 @@ class ClassificationDataSet(object):
         rs = []
         ss = []
         ds = []
+        ids = []
         max_x_len = -1
 
         for i, idx in enumerate(batch_idx):
@@ -72,11 +74,15 @@ class ClassificationDataSet(object):
             if truncate_num > 0:  # Truncate rationales.
                 domain = domain[:truncate_num]
             ds.append(domain)
+            
+            # Add an id to sample.
+            id_ = pair_dict_["id"]
+            ids.append(id_)
              
             max_x_len = max(max_x_len, len(tokens))
 
-        return xs, ys, rs, ss, ds, max_x_len
-    
+        return xs, ys, rs, ss, ds, ids, max_x_len
+
             
     def print_info(self):
         for k, v in self.label2instance_dict.items():

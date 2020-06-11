@@ -8,7 +8,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 class DataSignaler(object):
     """
-    Dataset signaler for movie reviewss.
+    Dataset signaler for movie reviews.
     Add linear signal and domain knowledge to train.tsv, dev.tsv and test.tsv.
     """
 

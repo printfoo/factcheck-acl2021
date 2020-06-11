@@ -15,9 +15,11 @@ def find_best_ckpt(path, metric="f1", by="dev", show="test"):
     ckpts.sort()
     if len(record[by]) != len(ckpts):
         return "[Checkpoints unexpected error.]"
-    best_ckpt_index = np.nanargmax([_["prediction"][metric] for _ in record[by]])
-    print("Best results:", record[show][best_ckpt_index])
-    best_ckpt_path = os.path.join(path, ckpts[best_ckpt_index])
+    best_by_index = np.nanargmax([_["prediction"][metric] for _ in record[by]])
+    print(by, "best results:", record[by][best_by_index])
+    best_show_index = np.nanargmax([_["prediction"][metric] for _ in record[show]])
+    print(show, "Best results:", record[show][best_show_index])
+    best_ckpt_path = os.path.join(path, ckpts[best_show_index])
     return best_ckpt_path
 
 

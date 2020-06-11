@@ -5,7 +5,7 @@ import torch
 import os, json
 
 
-def analyze(ckpt_path, out_path, data):
+def analyze(ckpt_path, out_path, data, args):
 
     model = torch.load(ckpt_path)  # Load model from checkpoint.    
     weight = model.linear.weight  # Weights of words.

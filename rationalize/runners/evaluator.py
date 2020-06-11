@@ -18,10 +18,11 @@ def evaluate(model, data, args, set_name):
     r_history = {"precision": [], "recall": [], "f1": [], "accuracy": [], "percentage": []}
 
     instance_count = data.data_sets[set_name].size()
-    for start in range(instance_count // args.batch_size):
+    for start in range(instance_count // args.batch_size + 1):
 
         # Get a batch.
-        batch_idx = range(start * args.batch_size, (start + 1) * args.batch_size)
+        batch_idx = range(start * args.batch_size,
+                          min((start + 1) * args.batch_size, instance_count))
         samples = data.get_batch(set_name, batch_idx=batch_idx, sort=True)
         x, y, m, r, s, d = samples
 

@@ -124,7 +124,7 @@ class ClassificationData(object):
         self.data_sets[data_set] = ClassificationDataSet()
         data_path = os.path.join(self.data_path, data_set + ".tsv")
         df = pd.read_csv(data_path, sep="\t")
-        for _, r in df.iterrows():
+        for id_, r in df.iterrows():
             tokens = r["tokens"].split(" ")
             label = r["label"]
             rationale = [float(_) if _ else 0. for _ in r["rationale_annotation"].split(" ")]
@@ -133,7 +133,7 @@ class ClassificationData(object):
             if label not in self.label_vocab:
                 self.label_vocab[label] = len(self.label_vocab)
             label = self.label_vocab[label]
-            self.data_sets[data_set].add_one(tokens, label,
+            self.data_sets[data_set].add_one(id_, tokens, label,
                                              rationale, signal, domain,
                                              self.truncate_num)
 
@@ -188,11 +188,14 @@ class ClassificationData(object):
         return self.get_batch(set_id, batch_idx, sort)
 
 
-    def get_batch(self, set_id, batch_idx, sort=False):
+    def get_batch(self, set_id, batch_idx, sort=False, return_id=False):
         """
         Randomly sample a batch to train.
         Inputs:
-            batch_size -- an integer for batch size.
+            set_id -- train, dev or test.
+            batch_idx -- ids of batch.
+            sort -- if sort based on seq_len.
+            return_id -- if return id.
         Outputs:
             x -- numpy array of input x, shape (batch_size, seq_len),
                  each element in the seq_len is of 0-|vocab| pointing to a token.
@@ -210,7 +213,7 @@ class ClassificationData(object):
 
         data_set = self.data_sets[set_id]
         samples = data_set.get_samples_from_ids(batch_idx, self.truncate_num)
-        xs_, ys_, rs_, ss_, ds_, max_x_len_ = samples
+        xs_, ys_, rs_, ss_, ds_, ids_, max_x_len_ = samples
 
         ms_ = []
         for i, x in enumerate(xs_):
@@ -226,6 +229,8 @@ class ClassificationData(object):
         r = np.array(rs_)
         s = np.array(ss_)
         d = np.array(ds_)
+        if return_id:
+            ids = np.array(ids_)
         
         if sort:  # Sort all according to seq_len.
             x_sort_idx = np.argsort(-np.sum(m, axis=1))
@@ -235,8 +240,13 @@ class ClassificationData(object):
             r = r[x_sort_idx, :]
             s = s[x_sort_idx, :]
             d = d[x_sort_idx, :]
-
-        return x, y, m, r, s, d
+            if return_id:
+                ids = ids[x_sort_idx]
+        
+        if return_id:
+            return x, y, m, r, s, d, ids
+        else:
+            return x, y, m, r, s, d
 
 
     def display_example(self, x, z=None, threshold=0.9):
