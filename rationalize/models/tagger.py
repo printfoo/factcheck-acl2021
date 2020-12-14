@@ -105,7 +105,7 @@ class Tagger(nn.Module):
             # Generate rationale and negative log probs,
             # (batch_size, seq_len, 2) -> (batch_size, seq_len)
             z, neg_log_probs = self._binarize_probs(z_probs)
-            return z, neg_log_probs, z_scores
+            return z, neg_log_probs, z_scores, hiddens
         
         else:  # Else return soft rationale selection, i.e., attention.
             
