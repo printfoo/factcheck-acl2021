@@ -16,3 +16,6 @@ data/*/*.txt
 
 # Model output.
 data/*/*.ckpt
+
+# Paper
+docs
