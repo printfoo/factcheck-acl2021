@@ -26,7 +26,8 @@ class Rationalizer(nn.Module):
         self.NEG_INF = -1.0e6
         self.use_cuda = args.cuda
         p_grad = lambda module: filter(lambda _: _.requires_grad, module.parameters())
-        self.loss_func = nn.CrossEntropyLoss(reduction="none")
+        self.ce_loss = nn.CrossEntropyLoss(reduction="none")
+        self.mse_loss = nn.MSELoss(reduction="none")
 
         # Initialize embedding layers.
         self.vocab_size, self.embedding_dim = embeddings.shape
@@ -131,7 +132,7 @@ class Rationalizer(nn.Module):
         # Prediction of anti classifier,
         # (batch_size, seq_len, embedding_dim) -> (batch_size, seq_len, |label|)
         if self.lambda_anti:
-            anti_predict = self.anti_classifier(embeddings, 1 - z, m)
+            anti_predict = self.anti_classifier(embeddings, hiddens, 1 - z, m)
         else:
             anti_predict = None
 
@@ -201,11 +202,10 @@ class Rationalizer(nn.Module):
 
     def _get_guidance_reward(self, z, ref):
         """
-        Get guidance reward of rationale selection.
+        Get guidance reward of _hard_ rationale selection.
         Inputs:
-            z -- selected rationale, shape (batch_size, seq_len),
-                 hard: each element is of 0/1 selecting a token or not.
-                 soft: each element is between 0-1 the attention paid to a token.
+            z -- hard selected rationale, shape (batch_size, seq_len),
+                 each element is of 0/1 selecting a token or not.
             ref -- reference for rationale selection, shape (batch_size, seq_len),
                    each element is of 0/1 selecting a token or not,
                    this reference could be importance score s or domain knowledge d.
@@ -215,8 +215,8 @@ class Rationalizer(nn.Module):
 
         # Get reward of rationale selection comparing to reference,
         # (batch_size, seq_len) -> (batch_size,)
-        reward = torch.mean(z * ref, dim=1)
-        return reward
+        reward_guidance = torch.mean(z * ref, dim=1)
+        return reward_guidance
 
 
     def _get_regularization_loss(self, z, m=None):
@@ -277,11 +277,11 @@ class Rationalizer(nn.Module):
 
         # Get loss of the classifier for the entire batch,
         # (batch_size,) -> (1,)
-        loss_classifier = torch.mean(self.loss_func(predict, y))
+        loss_classifier = torch.mean(self.ce_loss(predict, y))
         
         # Get accuracy of the classifier for each input, 
         # (batch_size,) -> (batch_size,)
-        reward_classifier = (torch.max(predict, dim=1)[1] == y).float()
+        reward_classifier = (torch.max(predict, dim=1)[1] == y).long()
         
         return loss_classifier, reward_classifier
 
@@ -331,7 +331,7 @@ class Rationalizer(nn.Module):
         
                 # Get importance score reward for tagged rationales.
                 if self.lambda_s:
-                    s = (s >= self.threshold_s).float()  # Binary.
+                    s = (s >= self.threshold_s).long()  # Binary.
                     reward_s = self._get_guidance_reward(z, s)
                 else:
                     reward_s = 0
@@ -347,6 +347,30 @@ class Rationalizer(nn.Module):
                 loss_tagger = self._get_tagger_loss(reward_classifier, reward_anti_classifier,
                                                     reward_s, reward_d, loss_continuity, loss_sparsity,
                                                     z, neg_log_probs, m)
+            
+            elif not self.rationale_binary:  # If soft rationale, add guidance loss.
+                
+                # Get importance score reward for scored rationales.
+                if self.lambda_s:
+                    s = (s >= self.threshold_s).long()  # Binary.
+                    reward_s = self._get_guidance_reward(z, s)
+                    loss_s = -torch.mean(reward_s)
+                else:
+                    loss_s = 0
+                    
+                # Add importance score loss.
+                loss_classifier += loss_s * self.lambda_s
+                
+                # Get domain knowledge reward for scored rationales.
+                if self.lambda_d:
+                    d = torch.abs(d)  # Binary.
+                    reward_d = self._get_guidance_reward(z, d)
+                    loss_d = -torch.mean(reward_d)
+                else:
+                    loss_d = 0
+                
+                # Add domain knowledge loss.
+                loss_classifier += loss_d * self.lambda_d
 
         # Backpropagate losses.
         losses = [loss_classifier]
@@ -382,12 +406,12 @@ def test_rationalizer(args):
         model.cuda()
     
     model.train()
-    x = Variable(torch.tensor([[1, 3, 3, 2, 2], [2, 1, 3, 1, 0], [3, 1, 2, 0, 0]]))  # (batch_size, seq_len).
-    y = Variable(torch.tensor([1, 0, 1]))  # (batch_size,).
-    m = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]]))  # (batch_size, seq_len).
-    r = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]]))  # (batch_size, seq_len).
-    s = Variable(torch.tensor([[0.1, 1, -0.1, 0, 0], [1, -0.1, 0, 0, 0], [0, 0, 0.1, 0, 0]]))  # (batch_size, seq_len).
-    d = Variable(torch.tensor([[0, 0, 1, 1, 1], [0, 0, 1, 1, 0], [0, 1, 1, 0, 0]]))  # (batch_size, seq_len).
+    x = Variable(torch.tensor([[1, 3, 3, 2, 2], [2, 1, 3, 1, 0], [3, 1, 2, 0, 0]])).long()  # (batch_size, seq_len).
+    y = Variable(torch.tensor([1, 0, 1])).long()  # (batch_size,).
+    m = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]])).long()  # (batch_size, seq_len).
+    r = Variable(torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 1, 0], [1, 1, 1, 0, 0]])).long()  # (batch_size, seq_len).
+    s = Variable(torch.tensor([[0.1, 1, -0.1, 0, 0], [1, -0.1, 0, 0, 0], [0, 0, 0.1, 0, 0]])).long()  # (batch_size, seq_len).
+    d = Variable(torch.tensor([[0, 0, 1, 1, 1], [0, 0, 1, 1, 0], [0, 1, 1, 0, 0]])).long()  # (batch_size, seq_len).
     if args.cuda:
         x = x.cuda()
         y = y.cuda()

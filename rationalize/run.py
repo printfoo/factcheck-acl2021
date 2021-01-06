@@ -6,12 +6,12 @@ import importlib, sys, os, json
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", type=str, default="train",
-                    help="Run mode, train or eval.")
+                    help="Run mode, train or analyze.")
 parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="movie_reviews",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="hard_rationalizer",
+parser.add_argument("--config_name", type=str, default="soft_rationalizer_w_domain",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
@@ -42,7 +42,7 @@ random.seed(args.random_seed)
 
 
 # Train or analyze a model.
-if args.mode in {"train", "analyze"}:
+if args.mode in {"train", "output"}:
 
     # Load data.
     from datasets.dataset_loader import ClassificationData
@@ -73,27 +73,54 @@ if args.mode in {"train", "analyze"}:
         from runners.trainer import train
         train(model, data, train_args)
         print("Model successfully trained.")
-
-    elif args.mode == "analyze":  # Analyze a model.
-
+    
+    elif args.mode == "output":  # Output rationales.
+        
         # Get best checkpoint.
         from utils.checkpointer import find_best_ckpt
         ckpt_path = find_best_ckpt(train_args.working_dir)
         print("Best checkpoint found:", ckpt_path)
 
-        # Analyze model.
-        analyze_out = os.path.join(args.data_path, args.config_name + ".analyze")
-        analyzer = importlib.import_module("analyzers.analyze_" + train_args.model_name)
-        analyzer.analyze(ckpt_path, analyze_out, data, train_args)
-        print("Model successfully analyzed.")
+        # Output rationales.
+        out_path = os.path.join(args.data_path, args.config_name + ".output")
+        outputer = importlib.import_module("analyzers.output_rationales")
+        outputer.output(ckpt_path, out_path, data, train_args)
+        print("Output rationales.")
+
+
+elif args.mode in {"eval", "evaluate"}:
+
+    # Get best checkpoint.
+    from utils.checkpointer import find_best_ckpt
+    ckpt_path = find_best_ckpt(train_args.working_dir)
+    print("Best checkpoint found:", ckpt_path)
+
+
+elif args.mode == "binarize":
+    
+    # Output rationales.
+    out_path = os.path.join(args.data_path, args.config_name + ".output")
+    outputer = importlib.import_module("analyzers.binarize_rationales")
+    outputer.binarize(out_path, train_args)
+    print("Binarized rationales.")
+
+
+elif args.mode == "vectorize":
+    # TODO
+    # Vectorize rationales.
+    analyze_out = os.path.join(args.data_path, args.config_name + ".analyze")
+    vectorize_out = os.path.join(args.data_path, args.config_name + ".vector")
+    vectorizer = importlib.import_module("analyzers.rationale_vectorizer")
+    vectorizer.vectorizer(analyze_out, train_args)
+    print("Rationales successfully vectorized.")
 
 
 elif args.mode == "test":
     
     # Test data.
-    # from datasets.dataset_loader import test_data
-    # test_data(args.data_path, train_args)
-    # print("Model successfully tested:", args.data_name)
+    from datasets.dataset_loader import test_data
+    test_data(args.data_path, train_args)
+    print("Model successfully tested:", args.data_name)
     
     # Test model.
     test_model = getattr(importlib.import_module("models." + train_args.model_name),

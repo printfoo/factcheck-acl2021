@@ -49,20 +49,21 @@ def evaluate(model, data, args, set_name):
         y_history["true"].extend(y.tolist())
         y_history["pred"].extend(y_pred.tolist())
 
-        if args.rationale_binary:
-            # Extend metrics of rationale r to history.
-            for a_r, a_r_pred, a_m in zip(r, r_pred, m):
-                for metric_name, metric_func in metric_funcs.items():
-                    r_history[metric_name].append(metric_func(a_r.tolist(), a_r_pred.tolist(),
-                                                              mask=a_m.tolist(), average="binary"))
+        if not bool(args.rationale_binary):
+            r_pred = (r_pred > args.binarize_threshold).float()
+
+        # Extend metrics of rationale r to history.
+        for a_r, a_r_pred, a_m in zip(r, r_pred, m):
+            for metric_name, metric_func in metric_funcs.items():
+                metric_vals = metric_func(a_r.tolist(), a_r_pred.tolist(), mask=a_m.tolist(), average="binary")
+                r_history[metric_name].append(metric_vals)
 
     # Get metrics for predictions y and rationales r.
     y_metrics = {}
     r_metrics = {}
     for metric_name, metric_func in metric_funcs.items():
-        y_metrics[metric_name] = metric_func(y_history["true"], y_history["pred"],
-                                             average="macro")
-        if args.rationale_binary:
-            r_metrics[metric_name] = np.nanmean(r_history[metric_name])
+        metric_vals = metric_func(y_history["true"], y_history["pred"], average="macro")
+        y_metrics[metric_name] = metric_vals
+        r_metrics[metric_name] = np.nanmean(r_history[metric_name])
 
     return {"prediction": y_metrics, "rationale": r_metrics}

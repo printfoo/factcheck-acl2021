@@ -13,6 +13,7 @@ def find_best_ckpt(path, metric="f1", by="dev", show="test"):
         record = json.load(f)
     ckpts = [f for f in os.listdir(path) if f.endswith(".pt")]
     ckpts.sort()
+    print(len(record[by]), len(ckpts))
     if len(record[by]) != len(ckpts):
         return "[Checkpoints unexpected error.]"
     best_by_index = np.nanargmax([_["prediction"][metric] for _ in record[by]])
