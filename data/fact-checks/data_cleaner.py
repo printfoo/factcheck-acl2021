@@ -9,20 +9,17 @@ np.random.seed(0)
 random.seed(0)
 
 
-unproven = {"unproven", "unconfirmed", "undetermined",
-    "in progress", "probably", "legend", "maybe"}
-mixture = {"mix", "incomplete", "partly", "sort of", "not quite"}
-false = {"false", "hoax", "scam", "fraud", "fiction", "satire",
-    "incorrect", "inaccurate", "miscaptioned", "misattributed",
-    "outdated", "not any", "no longer", "was true", "true but"}
-true = {"true", "real", "correct", "accurate"}
+misinfo = {"unproven", "unconfirmed", "undetermined", "in progress", "probably", "legend", "maybe",
+           "mix", "incomplete", "partly", "sort of", "not quite",
+           "false", "hoax", "scam", "fraud", "fiction", "satire", "incorrect", "inaccurate", 
+           "miscaptioned", "misattributed", "outdated", "not any", "no longer", "was true", "true but"}
+info = {"true", "real", "correct", "accurate"}
 
 
-def process_verdict(v):
-    for label, map in [("unproven", unproven), ("mixture", mixture),
-                       ("false", false), ("true", true)]:
-        for _ in map:
-            if _ in v:
+def process_verdict(verdict):
+    for label, words in [("misinfo", misinfo), ("info", info)]:
+        for word in words:
+            if word in verdict:
                 return label
     return np.nan
     
@@ -30,6 +27,8 @@ def process_verdict(v):
 def process_tokens(c):
     tokens = tokenizer.tokenize(c)
     tokens = ["<" + t[:-5] + ">" if t.endswith("TOKEN") else t.lower() for t in tokens]
+    if len(tokens) > 1000:
+        tokens = tokens[:500] + ["<MORE>"] + tokens[-500:]
     return pd.Series([" ".join(tokens), len(tokens)])
 
 
@@ -60,6 +59,12 @@ class DataCleaner(object):
         # Process tokens.
         factcheck[["tokens", "len"]] = factcheck["content"].apply(process_tokens)
         factcheck = factcheck.dropna()
+        
+        for lim in [512, 1024, 2048, 4096]:
+            percentage = len(factcheck[factcheck["len"] <= lim]) / len(factcheck)
+            print(lim, "\t", percentage)
+        
+        # Other information.
         factcheck["rationale_annotation"] = " "
         factcheck["linear_signal"] = " "
         factcheck["domain_knowledge"] = " "
