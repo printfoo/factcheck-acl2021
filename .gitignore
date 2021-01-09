@@ -12,6 +12,7 @@ __pycache__
 data/*/raw/*
 !data/*/raw/download.sh
 data/*/*.tsv
+data/*/*.csv
 data/*/*.txt
 
 # Model output.
