@@ -106,12 +106,12 @@ elif args.mode == "binarize":
 
 
 elif args.mode == "vectorize":
-    # TODO
+
     # Vectorize rationales.
-    analyze_out = os.path.join(args.data_path, args.config_name + ".analyze")
-    vectorize_out = os.path.join(args.data_path, args.config_name + ".vector")
-    vectorizer = importlib.import_module("analyzers.rationale_vectorizer")
-    vectorizer.vectorizer(analyze_out, train_args)
+    out_path = os.path.join(args.data_path, args.config_name + ".output")
+    vector_path = os.path.join(args.data_path, args.config_name + "_vectors.csv")
+    vectorizer = importlib.import_module("analyzers.vectorize_rationales")
+    vectorizer.vectorize(args.data_path, out_path, vector_path, train_args)
     print("Rationales successfully vectorized.")
 
 
