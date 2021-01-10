@@ -85,7 +85,7 @@ if args.mode in {"train", "output"}:
         out_path = os.path.join(args.data_path, args.config_name + ".output")
         outputer = importlib.import_module("analyzers.output_rationales")
         outputer.output(ckpt_path, out_path, data, train_args)
-        print("Output rationales.")
+        print("Rationales successfully output.")
 
 
 elif args.mode in {"eval", "evaluate"}:
@@ -102,7 +102,7 @@ elif args.mode == "binarize":
     out_path = os.path.join(args.data_path, args.config_name + ".output")
     outputer = importlib.import_module("analyzers.binarize_rationales")
     outputer.binarize(out_path, train_args)
-    print("Binarized rationales.")
+    print("Rationales successfully binarized.")
 
 
 elif args.mode == "vectorize":
@@ -113,6 +113,16 @@ elif args.mode == "vectorize":
     vectorizer = importlib.import_module("analyzers.vectorize_rationales")
     vectorizer.vectorize(args.data_path, out_path, vector_path, train_args)
     print("Rationales successfully vectorized.")
+
+
+elif args.mode == "cluster":
+
+    # Cluster rationales.
+    vector_path = os.path.join(args.data_path, args.config_name + ".vector")
+    cluster_path = os.path.join(args.data_path, args.config_name + ".cluster")
+    cluster = importlib.import_module("analyzers.cluster_rationales")
+    cluster.clust(vector_path, cluster_path)
+    print("Rationales successfully clustered.")
 
 
 elif args.mode == "test":
