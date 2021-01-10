@@ -18,6 +18,8 @@ data/*/*.txt
 # Model output.
 data/*/*.ckpt
 data/*/*.output
+data/*/*.vector
+data/*/*.cluster
 
 # Paper
 docs

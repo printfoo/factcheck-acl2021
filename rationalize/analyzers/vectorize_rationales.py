@@ -15,7 +15,7 @@ class Vectorizer(object):
 
     def __init__(self, data_path, rationale_path, vector_path, train_args):
         dfs = []
-        for set_name in ["dev", "test"]:
+        for set_name in ["train", "dev", "test"]:
             data = pd.read_csv(os.path.join(data_path, set_name + ".tsv"), sep="\t")
             rationale = pd.read_csv(os.path.join(rationale_path, set_name + ".tsv"), sep="\t")
             data["index"] = data.index
@@ -128,10 +128,13 @@ class Vectorizer(object):
         df = df.sort_values("count", ascending=False)
         df["rationale"] = df.index
         df["embeddings"] = df.apply(self._get_embedding, axis=1)
-        df.to_csv(self.vector_path, index=False)
+        df.to_csv(os.path.join(self.vector_path, "rationale_embeddings.csv"), index=False)
 
 
 def vectorize(data_path, rationale_path, vector_path, train_args):
+    
+    if not os.path.exists(vector_path):
+        os.mkdir(vector_path)
 
     vectorizer = Vectorizer(data_path, rationale_path, vector_path, train_args)
     vectorizer.get_word2vec(train_args.embedding_dim, train_args.embedding_dir)

@@ -109,7 +109,7 @@ elif args.mode == "vectorize":
 
     # Vectorize rationales.
     out_path = os.path.join(args.data_path, args.config_name + ".output")
-    vector_path = os.path.join(args.data_path, args.config_name + "_vectors.csv")
+    vector_path = os.path.join(args.data_path, args.config_name + ".vector")
     vectorizer = importlib.import_module("analyzers.vectorize_rationales")
     vectorizer.vectorize(args.data_path, out_path, vector_path, train_args)
     print("Rationales successfully vectorized.")
