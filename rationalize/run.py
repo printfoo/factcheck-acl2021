@@ -11,7 +11,7 @@ parser.add_argument("--data_dir", type=str, default="data",
                     help="Data folder name.")
 parser.add_argument("--data_name", type=str, default="fact-checks",
                     help="Dataset name.")
-parser.add_argument("--config_name", type=str, default="soft_rationalizer",
+parser.add_argument("--config_name", type=str, default="soft_rationalizer_w_domain",
                     help="Dataset name.")
 parser.add_argument("--random_seed", type=str, default=0,
                     help="Random seed")
@@ -23,9 +23,14 @@ args.config_dir = os.path.join(args.data_path, args.config_name + ".config")
 with open(args.config_dir, "r") as f:
     config = json.load(f)
 train_args = argparse.Namespace(**config)
-train_args.embedding_dir = os.path.join(args.data_dir, train_args.embedding_name,
-                                        train_args.embedding_name + \
-                                        ".6B.%sd.txt" % train_args.embedding_dim)
+if train_args.embedding_name == "glove":
+    train_args.embedding_dir = os.path.join(
+        args.data_dir,
+        train_args.embedding_name,
+        train_args.embedding_name + ".6B.%sd.txt" % train_args.embedding_dim
+    )
+elif train_args.embedding_name == "trained":
+    train_args.embedding_dir = os.path.join(args.data_path, "w2v.txt")
 train_args.working_dir = os.path.join(args.data_path, args.config_name + ".ckpt")
 
 # Set GPU chips.
@@ -105,7 +110,7 @@ elif args.mode == "binarize":
     print("Rationales successfully binarized.")
 
 
-elif args.mode == "vectorize":
+elif args.mode in {"vector", "vectorize"}:
 
     # Vectorize rationales.
     out_path = os.path.join(args.data_path, args.config_name + ".output")
@@ -121,7 +126,7 @@ elif args.mode == "cluster":
     vector_path = os.path.join(args.data_path, args.config_name + ".vector")
     cluster_path = os.path.join(args.data_path, args.config_name + ".cluster")
     cluster = importlib.import_module("analyzers.cluster_rationales")
-    cluster.clust(vector_path, cluster_path)
+    cluster.clust(vector_path, cluster_path, train_args)
     print("Rationales successfully clustered.")
 
 
