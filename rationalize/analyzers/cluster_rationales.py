@@ -1,7 +1,7 @@
 # coding: utf-8
 
 
-import os, shutil, multidict, random
+import os, json, shutil, random
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -73,7 +73,7 @@ class Cluster(object):
         ax.set_ylim([max(max(R["icoord"]))+100, min(min(R["icoord"]))-100])
         ax.set_yticks([])
         ax.set_xlim([1.1, 0])
-        ax.set_xlabel("Cosine distance of embeddings", fontproperties=font_bold)
+        ax.set_xlabel("cosine distance of embeddings", fontproperties=font_bold)
         for edge in ["right", "left", "top", "bottom"]:
              ax.spines[edge].set_visible(False)
         plt.savefig(fig_path, bbox_inches="tight", pad_inches=0)
@@ -93,9 +93,9 @@ class Cluster(object):
 
 
     def _get_rationale_freq(self, g):
-        rationale_freq = multidict.MultiDict()
+        rationale_freq = {}
         for word, freq in g[["rationale", "count"]].values:
-            rationale_freq.add(word, freq)
+            rationale_freq[word] = freq
         return rationale_freq
 
     
@@ -111,16 +111,20 @@ class Cluster(object):
         T = fcluster(Z, criterion="maxclust", t=self.cluster_num)  # Cluster labels.
         df["cluster"] = pd.Series(T)
 
-        fig_path = os.path.join(label_cluster_path, "dendrogram.png")
+        fig_path = os.path.join(label_cluster_path, "dendrogram.pdf")
         R = self._plot_dendrogram(Z, fig_path)
         
+        words_path = os.path.join(label_cluster_path, "clusters.json")
+        words = open(words_path, "w")
         for _, g in df.groupby("cluster"):
             cluster_id = int(g["cluster"].tolist()[-1] - 1)
             cluster_color = regular_colors[cluster_id % len(regular_colors)]
             rationale_num = R["color_list"].count(cluster_color)
             fig_path = os.path.join(label_cluster_path, "{:03d}".format(cluster_id) + ".png")
             rationale_freq = self._get_rationale_freq(g)
+            words.write(json.dumps(rationale_freq) + "\n")
             self._plot_wordcloud(rationale_freq, rationale_num, cluster_color, fig_path)
+        words.close()
 
 
 def clust(vector_path, cluster_path, train_args):

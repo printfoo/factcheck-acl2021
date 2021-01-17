@@ -117,7 +117,8 @@ class DataCleaner(object):
         factcheck["linear_signal"] = " "
         
         # Split and save.
-        selected_cols = ["label", "tokens", "rationale_annotation", "linear_signal", "domain_knowledge"]
+        selected_cols = ["label", "tokens", "rationale_annotation", 
+                         "linear_signal", "domain_knowledge", "date"]
         train = factcheck.sample(frac=0.8)
         train[selected_cols].to_csv("train.tsv", sep="\t", index=False)
         factcheck = factcheck.drop(train.index)
