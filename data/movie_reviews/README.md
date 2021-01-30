@@ -24,7 +24,7 @@ python data_cleaner.py
 
 3. Add domain knowledge:
 ```
-$ python data_signaler.py
+python data_signaler.py
 ```
 
 The dataset was originally released by:  
