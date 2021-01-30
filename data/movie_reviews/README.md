@@ -1,28 +1,30 @@
 # Movie Reviews Dataset.
 
-Download raw dataset to the `/raw` folder:
+Run the following script to prepare the dataset:
 ```
-http://www.eraserbenchmark.com/zipped/movies.tar.gz
-```
-
-Clean data at this directory `.`:
-```
-$ python data_cleaner.py
+./prepare_data.sh
 ```
 
-Download emotional lexicon EmoLex to the `/raw` folder:
+This script contains the following steps:
+
+1. Download data and lexicon:
 ```
-http://sentiment.nrc.ca/lexicons-for-research/NRC-Emotion-Lexicon.zip
+cd raw
+wget "http://www.eraserbenchmark.com/zipped/movies.tar.gz"
+tar -xvf "movies.tar.gz"
+wget "http://sentiment.nrc.ca/lexicons-for-research/NRC-Emotion-Lexicon.zip"
+unzip "NRC-Emotion-Lexicon.zip"
+cd ..
 ```
 
-Add linear siganl and domain knowledge at this directory `.`:
+2. Clean data:
+```
+python data_cleaner.py
+```
+
+3. Add domain knowledge:
 ```
 $ python data_signaler.py
-```
-
-Evaluate linear siganl and domain knowledge based rationales:
-```
-$ python data_evaluator.py
 ```
 
 The dataset was originally released by:  

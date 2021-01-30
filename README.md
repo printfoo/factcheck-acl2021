@@ -66,11 +66,12 @@ We have logged data to plot figures 3-5.
 
 To plot figure 3, run:
 ```
-python 
+python rationalize/run.py --mode=cluster --data_name=fact-checks --config_name=soft_rationalizer_w_domain
 ```
 
 To plot figures 4-5, run:
 ```
+cd data/fact-checks
 python 
 ```
 
