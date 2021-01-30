@@ -43,6 +43,7 @@ conda-build==3.18.11
 conda-package-handling==1.7.2
 conda-verify==3.4.2
 contextlib2==0.6.0.post1
+coverage==5.4
 cryptography==2.8
 cssselect2==0.4.1
 cycler==0.10.0
@@ -77,6 +78,7 @@ gpustat==0.6.0
 greenlet==0.4.15
 h5py==2.10.0
 HeapDict==1.0.1
+helpdev==0.7.1
 html5lib==1.0.1
 hypothesis==5.5.4
 idna==2.8
@@ -176,13 +178,18 @@ pylint==2.4.4
 pyodbc===4.0.0-unsupported
 pyOpenSSL==19.1.0
 pyparsing==2.4.6
+PyQt5==5.12.3
+PyQt5-sip==12.8.1
+PyQtWebEngine==5.12.1
 pyrsistent==0.15.7
 PySocks==1.7.1
 pytest==5.3.5
 pytest-arraydiff==0.3
 pytest-astropy==0.8.0
 pytest-astropy-header==0.1.2
+pytest-cov==2.11.1
 pytest-doctestplus==0.5.0
+pytest-filter-subpackage==0.1.1
 pytest-openfiles==0.4.0
 pytest-remotedata==0.3.2
 python-dateutil==2.8.1
@@ -244,6 +251,7 @@ torchvision==0.6.0a0+82fd1c8
 tornado==6.0.3
 tqdm==4.42.1
 traitlets==4.3.3
+typed-ast==1.4.2
 typing-extensions==3.7.4.3
 ujson==1.35
 unicodecsv==0.14.1
