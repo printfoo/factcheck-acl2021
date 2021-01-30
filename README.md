@@ -44,20 +44,25 @@ First make sure that the dataset and embeddings are prepared:
 ```
 cd data/movie_reviews
 ./prepare_data.sh
-cd ../..
-cd data/glove
+cd ../glove
 ./prepare_data.sh
 cd ../..
 ```
 
 Then, run the following command, each line corresponds to an experiment from h0-h3 and s0-s1:
 ```
-python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=soft_rationalizer
+python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=hard_rationalizer          # h0
+python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=hard_rationalizer_w_domain # h1
+python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=hard_rationalizer_wo_regu  # h2
+python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=hard_rationalizer_w_anti   # h3
+python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=soft_rationalizer          # s0
+python rationalize/run.py --mode=train --data_name=movie_reviews --config_name=soft_rationalizer_w_domain # s1
 ```
 
-To get the results for s2-s3, switch to the data folder and run:
+To replicate the results for s2-s3, run:
 ```
-python
+python rationalize/run.py --mode=output --data_name=movie_reviews --config_name=soft_rationalizer_w_domain
+python rationalize/run.py --mode=binarize --data_name=movie_reviews --config_name=soft_rationalizer_w_domain
 ```
 
 ### Replicating results for Figures 3-5.
