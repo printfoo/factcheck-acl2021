@@ -18,7 +18,7 @@ data/*/*.txt
 # Model output.
 data/*/*.ckpt
 data/*/*.output
-data/*/*.vector
+data/*/*.vector/*
 data/*/*.cluster
 
 # Log fact-checks
