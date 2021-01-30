@@ -67,22 +67,22 @@ python rationalize/run.py --mode=binarize --data_name=movie_reviews --config_nam
 
 ### Replicating results for Figures 3-5.
 
-We have logged data to plot figures 3-5.
+We have logged data to plot Figures 3-5.
 
-To plot figure 3, run:
+To plot Figure 3, run:
 ```
 python rationalize/run.py --mode=cluster --data_name=fact-checks --config_name=soft_rationalizer_w_domain
 ```
 
-To plot figures 4-5, run:
+To plot Figures 4 and 5, run:
 ```
 cd data/fact-checks
-python 
+python result_visualizer.py
 ```
 
 If you would like to train the model from scratch, run the following command in sequence.
 ```
-cd 
+cd data/fact-checks
 ```
 
 

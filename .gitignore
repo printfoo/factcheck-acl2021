@@ -20,6 +20,7 @@ data/*/*.ckpt
 data/*/*.output
 data/*/*.vector/*
 data/*/*.cluster
+data/*/*.results
 
 # Log fact-checks
 !data/fact-checks/data_w_rationale_clusters.csv
