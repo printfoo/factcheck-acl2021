@@ -62,5 +62,5 @@ for cluster in clusters:
 
 
 # Save mapped data.
-sel_col = [c for c in df.columns if c not in col_old]
+sel_col = [c for c in df.columns if c not in col_old] + ["date"]
 df[sel_col].to_csv("data_w_rationale_clusters.csv", index=False)
