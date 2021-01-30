@@ -1,8 +1,19 @@
 # GloVe Embeddings.
 
-Download pre-trained embeddings and unzip at this directory `.`:
+Run the following script to prepare the embeddings:
 ```
-http://nlp.stanford.edu/data/glove.6B.zip
+./prepare_data.sh
+```
+
+This script contains the following steps:
+
+1. Download pre-trained embeddings and unzip it:
+```
+cd raw
+wget "http://nlp.stanford.edu/data/glove.6B.zip"
+unzip glove.6B.zip
+mv glove.6B.*d.txt ../
+cd ..
 ```
 
 The dataset was released by:

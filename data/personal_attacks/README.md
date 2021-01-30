@@ -1,31 +1,31 @@
 # Personal Attacks Dataset.
 
-Download raw dataset to the `/raw` folder:
+Run the following script to prepare the dataset:
 ```
-https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7554634/attack_annotated_comments.tsv
-https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7554637/attack_annotations.tsv
-https://raw.githubusercontent.com/shcarton/rcnn/master/deliberativeness/data/processed/wiki/personal_attacks/wiki_attack_dev_rationale.csv
-https://raw.githubusercontent.com/shcarton/rcnn/master/deliberativeness/data/processed/wiki/personal_attacks/wiki_attack_test_rationale.csv
+./prepare_data.sh
 ```
 
-Clean data at this directory `.`:
+This script contains the following steps:
+
+1. Download data and lexicon:
 ```
-$ python data_cleaner.py
+cd raw
+wget "https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7554634/attack_annotated_comments.tsv"
+wget "https://s3-eu-west-1.amazonaws.com/pfigshare-u-files/7554637/attack_annotations.tsv"
+wget "https://raw.githubusercontent.com/shcarton/rcnn/master/deliberativeness/data/processed/wiki/personal_attacks/wiki_attack_dev_rationale.csv"
+wget "https://raw.githubusercontent.com/shcarton/rcnn/master/deliberativeness/data/processed/wiki/personal_attacks/wiki_attack_test_rationale.csv"
+wget "https://raw.githubusercontent.com/uds-lsv/lexicon-of-abusive-words/master/Lexicons/baseLexicon.txt"
+cd ..
 ```
 
-Download abusive word lexicon to the `/raw` folder:
+2. Clean data:
 ```
-https://raw.githubusercontent.com/uds-lsv/lexicon-of-abusive-words/master/Lexicons/baseLexicon.txt
-```
-
-Add linear siganl and domain knowledge at this directory `.`:
-```
-$ python data_signaler.py
+python data_cleaner.py
 ```
 
-Evaluate linear siganl and domain knowledge based rationales:
+3. Add domain knowledge:
 ```
-$ python data_evaluator.py
+python data_signaler.py
 ```
 
 The dataset was originally released by:  
