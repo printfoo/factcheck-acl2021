@@ -21,5 +21,9 @@ data/*/*.output
 data/*/*.vector
 data/*/*.cluster
 
+# Log fact-checks
+!data/fact-checks/data_w_rationale_clusters.csv
+!data/fact-checks/soft_rationalizer_w_domain.vector/rationale_embeddings_filtered.csv
+
 # Paper
 docs

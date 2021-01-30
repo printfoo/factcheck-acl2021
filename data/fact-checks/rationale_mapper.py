@@ -27,7 +27,7 @@ def map_rationales(t, d):
 
 # Read rationale clusters.
 clusters_path = os.path.join("soft_rationalizer_w_domain.cluster",
-                            "misinfo", "clusters.json")
+                             "misinfo", "clusters.json")
 with open(clusters_path, "r") as f:
     clusters = f.read().split("\n")[:-1]
 
@@ -38,6 +38,7 @@ for set_name in ["train", "dev", "test"]:
     df = pd.read_csv(set_name + ".tsv", sep="\t")
     dfs.append(df)
 df = pd.concat(dfs)
+col_old = df.columns
 
 
 # Label event.
@@ -61,4 +62,5 @@ for cluster in clusters:
 
 
 # Save mapped data.
-df.to_csv("data_w_rationale_clusters.csv", index=False)
+sel_col = [c for c in df.columns if c not in col_old]
+df[sel_col].to_csv("data_w_rationale_clusters.csv", index=False)

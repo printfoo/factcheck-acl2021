@@ -1,4 +1,4 @@
-# FactChecks Dataset.
+# Fact-Checks Dataset.
 
 Download raw dataset to the `/raw` folder:
 ```
