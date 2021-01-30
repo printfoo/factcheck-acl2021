@@ -1,21 +1,21 @@
-# Rationalization.
+# Rationalizing Fact-Checks
 
-## Instructions.
+## General instructions.
 
-Download data:
+1. Install required dependencies:
 ```
-$ cd data/[DATASET]/raw
-$ ./download.sh
-```
-
-Preprocess data:
-```
-$ cd data/[DATASET]
-$ python data_cleaner.py
-$ python data_signaler.py
+pip install -r requirements.txt
 ```
 
-Train a model:
+2. Download and process data following instructions in data folders:
 ```
-$ python rationalize/run.py 
+cd data/[DATA_NAME]
 ```
+
+3. Train/evaluate/etc models or output/cluster/etc rationales:
+```
+python rationalize/run.py --mode=[MODE] --data_name=[DATA_NAME] --config_name=[CONFIG_NAME]
+```
+
+## Instructions for replicating results in the paper.
+
