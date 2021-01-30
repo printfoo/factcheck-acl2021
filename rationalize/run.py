@@ -73,6 +73,8 @@ if args.mode in {"train", "output"}:
                         format_class(train_args.model_name))
         model = Model(embeddings, train_args)
         print("Model successfully initialized:", model)
+        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print("# of parameters:", num_params)
 
         # Train model.
         from runners.trainer import train

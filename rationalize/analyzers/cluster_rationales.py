@@ -1,7 +1,7 @@
 # coding: utf-8
 
 
-import os, json, shutil, random
+import os, json, shutil, random, heapq
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -11,6 +11,8 @@ from matplotlib.font_manager import FontProperties
 from scipy.cluster import hierarchy
 from scipy.cluster.hierarchy import linkage, fcluster, dendrogram
 from wordcloud import WordCloud
+from cairosvg import svg2png
+from PIL import Image
 np.random.seed(0)
 random.seed(0)
 
@@ -67,13 +69,14 @@ class Cluster(object):
 
     def _plot_dendrogram(self, Z, fig_path):
         hierarchy.set_link_color_palette(regular_colors)
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 15))
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(2, 14))
         R = dendrogram(Z, color_threshold=Z[-self.cluster_num + 1,2],
                        above_threshold_color=default_color, ax=ax, orientation="left")
         ax.set_ylim([max(max(R["icoord"]))+100, min(min(R["icoord"]))-100])
         ax.set_yticks([])
         ax.set_xlim([1.1, 0])
-        ax.set_xlabel("cosine distance of embeddings", fontproperties=font_bold)
+        ax.set_xticks([1, 0.5, 0])
+        ax.set_xlabel("cosine distance", fontproperties=font_bold)
         for edge in ["right", "left", "top", "bottom"]:
              ax.spines[edge].set_visible(False)
         plt.savefig(fig_path, bbox_inches="tight", pad_inches=0)
@@ -81,13 +84,65 @@ class Cluster(object):
 
 
     def _plot_wordcloud(self, rationale_freq, rationale_num, cluster_color, fig_path):
-        wc = WordCloud(width=2000,
-                       height=rationale_num * 5,  # In scale to the # of leaves.
+        
+        # Generate a mask, rounded rectangular on left side.
+        mask_svg_path = fig_path.replace(".png", "_mask.svg")
+        mask_png_path = fig_path.replace(".png", "_mask.png")
+        width = 600
+        rounded = width * 0.025
+        stroke = 3
+        height_rounded = rationale_num  # In scale to the # of leaves.
+        height = height_rounded - 2 * rounded - stroke
+        
+        mask_svg = """
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="{width_rounded}"
+            height="{height_rounded}"
+            viewBox="{stroke_half} -{stroke_half} {width_rounded} {height_rounded}">
+        <rect width="100%" height="100%" fill="none"/>
+        <path d="M0,0
+            h{width}
+            q{rounded}, 0 {rounded},{rounded}
+            v{height}
+            q0,{rounded} -{rounded},{rounded}
+            h-{width}
+            z"
+            fill="{color}"
+            fill-opacity="0.2"
+            stroke="{color}"
+            stroke-width="{stroke}">
+        </path>
+        </svg>
+        """.format(
+            width=width,
+            height=height,
+            rounded=rounded,
+            width_rounded=width + rounded,
+            height_rounded=height_rounded,
+            color=cluster_color,
+            stroke=stroke,
+            stroke_half=stroke/2,
+        )
+        with open(mask_svg_path, "w") as f:
+            f.write(mask_svg)
+        svg2png(
+            bytestring=mask_svg.replace("none", "#ffffff"),
+            write_to=mask_png_path
+        )
+        mask = np.array(Image.open(mask_png_path))
+
+        rationale_freq = {k: min(v, 30) for k, v in rationale_freq.items()}
+        print(rationale_freq)
+
+        # Plot wordcloud.
+        wc = WordCloud(mask=mask,
                        background_color=None,  # Transparent background.
                        mode="RGBA",  # Transparent background.
                        color_func=lambda *_, **__: default_color,  # Default color text.
-                       relative_scaling=0.,
-                       prefer_horizontal=0.999)
+                       relative_scaling=.5,
+                       prefer_horizontal=0.9999,
+                       max_font_size=50)
         wc.generate_from_frequencies(rationale_freq)
         wc.to_file(fig_path)
 
@@ -111,7 +166,7 @@ class Cluster(object):
         T = fcluster(Z, criterion="maxclust", t=self.cluster_num)  # Cluster labels.
         df["cluster"] = pd.Series(T)
 
-        fig_path = os.path.join(label_cluster_path, "dendrogram.pdf")
+        fig_path = os.path.join(label_cluster_path, "dendrogram.svg")
         R = self._plot_dendrogram(Z, fig_path)
         
         words_path = os.path.join(label_cluster_path, "clusters.json")

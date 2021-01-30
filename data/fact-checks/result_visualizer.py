@@ -14,9 +14,7 @@ from statsmodels.stats.proportion import proportion_confint as pc
 # Matplotlib settings.
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
-matplotlib.rcParams["font.size"] = 14
-font_bold = FontProperties()
-font_bold.set_weight(550)
+matplotlib.rcParams["font.size"] = 18
 
 
 # Plot style settings.
@@ -33,7 +31,7 @@ clusters = [
     "clickbait, sensational, etc.",
 ]
 cluster_labels = [
-    r"$\bf{legend}$, $\bf{tale}$, etc.",
+    "legend, tale, etc.",
     "altered, digitally, etc.",
     "hoax, joke, etc.",
     "scam, phony, etc.",
@@ -66,24 +64,26 @@ event_pairs = {
         "COVID-19",
     ]
 }
-markers = ["^v7", "Ds6"]
+markers = ["^v8", "Ds7"]
+lw=4
+alpha=0.6
 
 
 def bebold(s):
     w1 = s.split(", ")[0]
     w2 = s.split(", ")[1]
-    return r"$\bf{}$, $\bf{}$, etc.".format(w1, w2)
+    return r"$\bf{}$, etc.".format(w1, w2)
 
 
 # Plot path settings.
-figs_path = "figs"
+figs_path = "soft_rationalizer_w_domain.results"
 if not os.path.exists(figs_path):
     os.mkdir(figs_path)
 
 
 # Plot event wise diff.
 def plot_event(event_pairs, df):
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(6, 6))
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(5, 8))
     for i, (event_pair, events) in enumerate(event_pairs.items()): 
         e0, e1 = events[0], events[1]
         tdf0, tdf1 = df[df[events[0]]], df[df[events[1]]]
@@ -105,23 +105,27 @@ def plot_event(event_pairs, df):
                 ax[i].axhline(j, lw=35, color="#D8D8D8")
             d = 0.15
             ax[i].plot([low0, high0], [j-d, j-d],
-                       color=color_dict[cluster], lw=2, alpha=0.5)
+                       color=color_dict[cluster], lw=lw, alpha=alpha)
             ax[i].plot([pos0 / total0], [j-d], color=color_dict[cluster],
                        marker=markers[i][0], markersize=int(markers[i][2]))
             ax[i].plot([low1, high1], [j+d, j+d],
-                       color=color_dict[cluster], lw=2, alpha=0.5)
+                       color=color_dict[cluster], lw=lw, alpha=alpha)
             ax[i].plot([pos1 / total1], [j+d], color=color_dict[cluster],
                        marker=markers[i][1], markersize=int(markers[i][2]))
-            ax[i].set_ylim([9.5, -0.5])
-            ax[i].set_xlim([0, 0.4])
-            ax[i].set_xticks([0, 0.2, 0.4])
-            ax[i].set_xticklabels(["     0%", "20%", "40%      "])
+        ax[i].set_ylim([9.5, -0.5])
         ax[i].plot(-1, -1, color="k", label=e0,
                    marker=markers[i][0], markersize=int(markers[i][2]))
         ax[i].plot(-1, -1, color="k", label=e1,
                    marker=markers[i][1], markersize=int(markers[i][2]))
-        leg = ax[i].legend(bbox_to_anchor=(0.5, 1.05, 0, 0), loc="lower center", borderaxespad=0.)
+        leg = ax[i].legend(bbox_to_anchor=(1, 1.05, 0, 0), loc="lower right",
+                           borderaxespad=0., fontsize=16)
         leg.get_frame().set_alpha(0)
+    ax[0].set_xlim([0, 0.4])
+    ax[0].set_xticks([0, 0.2, 0.4])
+    ax[0].set_xticklabels([" 0", ".2 ", ".4  "])
+    ax[1].set_xlim([0, 0.65])
+    ax[1].set_xticks([0, 0.3, 0.6])
+    ax[1].set_xticklabels([" 0", ".3 ", ".6  "])
     ax[0].set_yticks([9-i for i in range(10)])
     ax[0].set_yticklabels([bebold(clusters[9-i]) for i in range(10)])
     ax[1].set_yticks([])
@@ -129,13 +133,13 @@ def plot_event(event_pairs, df):
     for edge in ["right", "left", "top", "bottom"]:
         ax[0].spines[edge].set_visible(False)
         ax[1].spines[edge].set_visible(False)
-    plt.savefig(os.path.join(figs_path, "events.pdf"),
+    plt.savefig(os.path.join(figs_path, "analyze_events.pdf"),
                 bbox_inches="tight", pad_inches=0)
 
 
 # Plot cluster per year.
 def plot_cluster(clusters, df):
-    fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(24, 5))
+    fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(16, 5))
     for i, cluster in enumerate(clusters):
         ax = axes[i // 5][i % 5]
         years, rates = [], []
@@ -147,13 +151,13 @@ def plot_cluster(clusters, df):
             total = len(tdf)
             low, high = pc(pos, total)
             ax.plot([year, year], [low, high],
-                    color=color_dict[cluster], lw=2, alpha=0.5)
+                    color=color_dict[cluster], lw=lw, alpha=alpha)
             rates.append(pos / total)
-        ax.plot(years, rates, color=color_dict[cluster], lw=2, marker="o")
+        ax.plot(years, rates, color=color_dict[cluster], lw=lw, alpha=alpha, marker="o")
         ax.set_xlim([2009.5, 2020.5])
         if i // 5 == 0:
-            ax.set_xticks([2010, 2012, 2014, 2016, 2018, 2020])
-            ax.set_xticklabels(["’10", "’12", "’14", "’16", "’18", "’20"])
+            ax.set_xticks([2010, 2015, 2020])
+            ax.set_xticklabels(["  till ’10", "’15 ", "’20    "])
         else:
             ax.set_xticks([])
             ax.set_xticklabels([])
@@ -162,13 +166,13 @@ def plot_cluster(clusters, df):
         ax.set_ylim([-0.02, 0.58])
         if i % 5 == 0:
             ax.set_yticks([0, 0.2, 0.4])
-            ax.set_yticklabels(["0%", "20%", "40%"])
+            ax.set_yticklabels(["0", ".2", ".4"])
         else:
             ax.set_yticks([])
             ax.set_yticklabels([])
         for edge in ["right", "left", "top", "bottom"]:
             ax.spines[edge].set_visible(False)
-        plt.savefig(os.path.join(figs_path, "cluster.pdf"),
+        plt.savefig(os.path.join(figs_path, "analyze_clusters.pdf"),
                     bbox_inches="tight", pad_inches=0)
 
 

@@ -33,8 +33,9 @@ def test_threshold(df, thresholds):
 def binarize(out_path, args):
 
     # set_names = ["train", "dev", "test"]  # Analyze all.
-    set_names = ["test"]
+    set_names = ["dev", "test"]
     for set_name in set_names:
+        print(set_name)
         set_path = os.path.join(out_path, set_name + ".tsv")
         df = pd.read_csv(set_path, sep="\t")
         test_threshold(df, args.test_thresholds)

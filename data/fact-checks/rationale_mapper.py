@@ -42,8 +42,8 @@ df = pd.concat(dfs)
 
 # Label event.
 events = {
-    "’16 US election": {"hillary", "clinton", "donald", "trump"},
-    "’20 US election": {"donald", "trump", "joe", "biden"},
+    "’16 US election": {"hillary clinton", "donald trump", "mike pence", "tim kaine"},
+    "’20 US election": {"donald trump", "joe biden", "mike pence", "kamala harris"},
     "H1N1": {"flu", "influenza", "h1n1"},
     "COVID-19": {"covid", "coronavirus"},
 }

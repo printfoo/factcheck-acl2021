@@ -91,7 +91,7 @@ class DataCleaner(object):
         factcheck = factcheck.drop_duplicates()
 
         # _ = factcheck.groupby("verdict").count()["url"].sort_values(ascending=False).index.tolist()
-        
+
         # Process verdict.
         factcheck["label"] = factcheck["verdict"].apply(process_verdict)
         factcheck = factcheck.dropna()
@@ -104,6 +104,11 @@ class DataCleaner(object):
         tokens = set(" ".join(factcheck["tokens"].tolist()).split(" "))
         symbols = {t for t in tokens if t.startswith("<") and t.endswith(">")}
         print(symbols)
+        
+        # Print stats.
+        labels = factcheck.groupby("label").count()["url"]
+        print(labels)
+        print(factcheck["len"].median())
         
         for lim in [512, 1024, 2048, 4096]:
             percentage = len(factcheck[factcheck["len"] <= lim]) / len(factcheck)
