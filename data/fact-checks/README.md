@@ -1,17 +1,39 @@
 # Fact-Checks Dataset.
 
-Download raw dataset to the `/raw` folder:
+To protect the copyright of Snopes.com, we provide only URLs to fact-checks in `raw`.
+
+To get this dataset, first download webpages one by one from Snopes.com:
 ```
-https://raw.githubusercontent.com/printfoo/misinfo-cscw2018-icwsm2020/master/misinfo-response-cscw18/public_data/snopes.tsv
+python data_downloader.py
+```
+This could take several hours depending on your internet speed.
+
+Then, extract text from HTML webpages:
+```
+python data_extractor.py
 ```
 
-Clean data at this directory `.`:
+Clean data:
 ```
-$ python data_cleaner.py
+python data_cleaner.py
 ```
 
-The dataset was originally released by:  
-- Shan Jiang, Christo Wilson, **Linguistic Signals under Misinformation and Fact-Checking: Evidence from User Comments on Social Media**, *CSCW 2018* (https://shanjiang.me/resources/#misinformation).
+Train word2vec:
+```
+python data_word2vec.py
+```
 
-Some processing functions may align with:
-- Shan Jiang, Simon Baumgartner, Abe Ittycheriah, Cong Yu, **Factoring Fact-Checks: Structured Information Extraction from Fact-Checking Articles**, *WWW 2020* (https://shanjiang.me/resources/#fact-checks).
+After outputing rationales, filter them.
+```
+python rationale_filterer.py
+```
+
+Map rationales to fact-checks:
+```
+python rationale_mapper.py
+```
+
+Plot results:
+```
+python result_visualizer.py
+```
