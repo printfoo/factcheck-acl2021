@@ -73,16 +73,33 @@ To plot Figure 3, run:
 ```
 python rationalize/run.py --mode=cluster --data_name=fact-checks --config_name=soft_rationalizer_w_domain
 ```
+The results can be found in `data/fact-checks/soft_rationalizer_w_domain.cluster`.
 
 To plot Figures 4 and 5, run:
 ```
 cd data/fact-checks
 python result_visualizer.py
 ```
+The results can be found in `data/fact-checks/soft_rationalizer_w_domain.results`.
 
 If you would like to train the model from scratch, run the following command in sequence.
 ```
 cd data/fact-checks
+python data_downloader.py     # Download fact-checks.
+python data_extractor.py      # Extract text from HTML.
+python data_cleaner.py        # Clean fact-checks.
+python data_word2vec.py       # Build word2vec.
+cd ../..
+python rationalize/run.py --mode=train --data_name=fact-checks --config_name=soft_rationalizer_w_domain
+python rationalize/run.py --mode=output --data_name=fact-checks --config_name=soft_rationalizer_w_domain
+python rationalize/run.py --mode=vectorize --data_name=fact-checks --config_name=soft_rationalizer_w_domain
+cd data/fact-checks
+python rationale_filterer.py  # Filter vectors.
+cd ../..
+python rationalize/run.py --mode=cluster --data_name=fact-checks --config_name=soft_rationalizer_w_domain
+cd data/fact-checks
+python rationale_mapper.py    # Map rationales.
+python result_visualizer.py   # Plot results.
 ```
 
 
