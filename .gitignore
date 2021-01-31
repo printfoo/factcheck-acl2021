@@ -23,6 +23,7 @@ data/*/*.cluster
 data/*/*.results
 
 # Log fact-checks
+!data/fact-checks/raw/url_list
 !data/fact-checks/data_w_rationale_clusters.csv
 !data/fact-checks/soft_rationalizer_w_domain.vector/rationale_embeddings_filtered.csv
 
