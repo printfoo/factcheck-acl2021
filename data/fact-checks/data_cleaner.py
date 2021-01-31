@@ -19,21 +19,17 @@ misinfo = {
     # For verdict only.
     "sort of", "not quite", "not likely", "in progress", 
     "not any", "no longer", "was true", "true but",
-    # Fake news. It’s complicated.
-    "fabricat", "manipulat", "imposter", "mislead", "misled", "parody",
-    # Added.
-    "conspirac", "jok", "prank", "spoof", "doctored", "mistak", "plot",
-    "dubious", "exaggerat", "myth", "unfound", "fool", "baseless", "vague",
-    "deliberat", "unrelat", "propaganda", "phony", "humor", "bogus", "gossip",
-    "misrepresent", "error", "spurious", "flaw", "unsubstantiat", "apocryph",
-    "unverif", "dismiss", "nonsens", "contradict", "unsupport", "discard", 
-    "bias", "conject", "innuendo", "nonexist", "disreput", "intentional",
 }
 info = {
     # Snopes verdicts.
     "true", "real", "correct", "accurate",
 }
-labels_dict = {"misinfo": misinfo, "info": info}
+domain_knowledge = {
+    # Snopes verdicts.
+    "unproven", "outdate", "legend", "satir", "scam", "miscaption", "misattribut",
+    # Fake news. It’s complicated.
+    "fabricat", "manipulat", "imposter", "mislead", "parody",
+}
 masks = {
     "false", "true", "claim", "stat", "quot",
     "origin", "story", "article", "rumor", "evidence", "proof"
@@ -64,7 +60,7 @@ def process_domain(r):
     tokens = r["tokens"].split(" ")
     domain = ["0" for t in tokens]
     for i, t in enumerate(tokens):
-        for word in labels_dict[r["label"]]:
+        for word in domain_knowledge:
             if word in t:
                 domain[i] = "1"
     return " ".join(domain)
