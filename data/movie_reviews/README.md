@@ -12,7 +12,7 @@ This script contains the following steps:
 cd raw
 wget "http://www.eraserbenchmark.com/zipped/movies.tar.gz"
 tar -xvf "movies.tar.gz"
-wget "http://sentiment.nrc.ca/lexicons-for-research/NRC-Emotion-Lexicon.zip"
+wget "https://saifmohammad.com/WebDocs/Lexicons/NRC-Emotion-Lexicon.zip"
 unzip "NRC-Emotion-Lexicon.zip"
 cd ..
 ```
