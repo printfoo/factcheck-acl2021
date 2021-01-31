@@ -93,7 +93,7 @@ class snopesExtractor:
 
     # Traverse all raw responses.
     def traverse(self):
-        file_name = "articles-{:05d}".format(self.index)
+        file_name = "article-{:05d}".format(self.index)
         file_path = os.path.join(self.raw_path, file_name)
         if not os.path.exists(file_path):  # Done, no next one.
             return False

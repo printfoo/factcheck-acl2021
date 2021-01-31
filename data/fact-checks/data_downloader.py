@@ -16,7 +16,7 @@ class snopesCrawler:
 
     # save current response and increment to next
     def save_and_increment(self):
-        with open(os.path.join(self.save_path, self.type + "-{:05}".format(self.index)), "w") as f:
+        with open(os.path.join(self.save_path, "article-{:05}".format(self.index)), "w") as f:
             f.write(self.res.content.decode("utf-8"))
         self.index += 1
 
