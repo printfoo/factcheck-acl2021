@@ -27,7 +27,7 @@ class DataSignaler(object):
         print("Threshold:", threshold[0][1])
         
         # Domain knowledge.
-        self.vocab_dir = os.path.join("raw", "NRC-Emotion-Lexicon-v0.92",
+        self.vocab_dir = os.path.join("raw", "NRC-Emotion-Lexicon", "NRC-Emotion-Lexicon-v0.92",
                                       "NRC-Emotion-Lexicon-Wordlevel-v0.92.txt")
         with open(self.vocab_dir, "r") as f:
             vocab = f.read().strip().lower().split("\n")
