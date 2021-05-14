@@ -1,6 +1,15 @@
-# Rationalizing Fact-Checks
+## Code for the fact-check rationalization paper @ ACL 2021.
 
-## General instructions.
+### Paper:
+**Structurizing Misinformation Stories via Rationalizing Fact-Checks**  
+Shan Jiang, Christo Wilson  
+*Proceedings of the Annual Meeting of the Association for Computational Linguistics*, 2021  
+Paper available at: https://shanjiang.me/publications/acl21_paper.pdf
+
+### Contact:
+Shan Jiang (sjiang@ccs.neu.edu)
+
+### General instructions.
 
 Install required dependencies:
 ```
@@ -34,9 +43,9 @@ python rationalize/run.py --mode=[MODE] --data_name=[DATA_NAME] --config_name=[C
 `[CONFIG_NAME]`:
 - e.g., `soft_rationalizer` or any `.config` files in `[DATA_NAME]` folder.
 
-## Instructions for replicating results in the paper.
+### Instructions for replicating results in the paper.
 
-### Replicating results for Table 1.
+#### Replicating results for Table 1.
 
 Here is the instruction to replicate the `movie_reviews` column of Table 1. To replicate another column simply replace `movie_reviews` to `personal_attacks` in all the command lines.
 
@@ -65,7 +74,7 @@ python rationalize/run.py --mode=output --data_name=movie_reviews --config_name=
 python rationalize/run.py --mode=binarize --data_name=movie_reviews --config_name=soft_rationalizer_w_domain
 ```
 
-### Replicating results for Figures 3-5.
+#### Replicating results for Figures 3-5.
 
 We have logged data to plot Figures 3-5.
 
