@@ -3,7 +3,7 @@
 ### Paper:
 **Structurizing Misinformation Stories via Rationalizing Fact-Checks**  
 Shan Jiang, Christo Wilson  
-*Proceedings of the Annual Meeting of the Association for Computational Linguistics*, 2021  
+In *Proceedings of the Annual Meeting of the Association for Computational Linguistics*, 2021  
 Paper available at: https://shanjiang.me/publications/acl21_paper.pdf
 
 ### Contact:
